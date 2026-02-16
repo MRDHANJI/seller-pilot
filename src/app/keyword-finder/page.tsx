@@ -31,7 +31,8 @@ export default function KeywordFinder() {
                 trend: Math.floor(Math.random() * 100) - 20,
                 competition: ['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)],
                 organic: Math.floor(Math.random() * 100),
-                sponsored: Math.floor(Math.random() * 50)
+                sponsored: Math.floor(Math.random() * 50),
+                relevance: Math.floor(Math.random() * 40) + 60
             }));
             setResults(mockKeywords.sort((a, b) => b.volume - a.volume));
             setLoading(false);
@@ -120,7 +121,7 @@ export default function KeywordFinder() {
                                         </td>
                                         <td>
                                             <div className={styles.relevanceBar}>
-                                                <div className={styles.relevanceFill} style={{ width: `${Math.random() * 40 + 60}%` }} />
+                                                <div className={styles.relevanceFill} style={{ width: `${kw.relevance}%` }} />
                                             </div>
                                         </td>
                                         <td>

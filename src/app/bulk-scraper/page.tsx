@@ -8,16 +8,28 @@ import {
     Play,
     FileSpreadsheet,
     CheckCircle2,
-    Loader2,
-    AlertTriangle
+    Loader2
 } from "lucide-react";
 import csvDownload from "json-to-csv-export";
 import styles from "./BulkScraper.module.css";
 
+interface ScrapedData {
+    asin: string;
+    title: string;
+    price: string;
+    mrp: string;
+    rating: string;
+    reviews: string;
+    bsr: string;
+    category: string;
+    images: number;
+    soldBy: string;
+}
+
 export default function BulkScraper() {
     const [asinsInput, setAsinsInput] = useState("");
     const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<any[]>([]);
+    const [results, setResults] = useState<ScrapedData[]>([]);
     const [progress, setProgress] = useState(0);
 
     const startScraping = async () => {
@@ -31,7 +43,7 @@ export default function BulkScraper() {
         setResults([]);
         setProgress(0);
 
-        const scrapedData = [];
+        const scrapedData: ScrapedData[] = [];
         for (let i = 0; i < asins.length; i++) {
             try {
                 const response = await fetch("/api/scrape", {
@@ -70,7 +82,7 @@ export default function BulkScraper() {
                     <Globe size={28} className="gradient-text" />
                 </div>
                 <div>
-                    <h1 className={styles.title}>Bulk Data Scraper</h1>
+                    <h2 className={styles.title}>Bulk Data Scraper</h2>
                     <p className={styles.subtitle}>Extract comprehensive product data for multiple ASINs from Amazon.in.</p>
                 </div>
             </header>
@@ -169,7 +181,7 @@ export default function BulkScraper() {
                                 ))}
                                 {results.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className={styles.emptyTd}>
+                                        <td colSpan={6} className={styles.emptyTd}>
                                             <div className={styles.emptyContent}>
                                                 <FileSpreadsheet size={48} className={styles.emptyIcon} />
                                                 <p>No data extracted yet. Start a scraping task to see results.</p>

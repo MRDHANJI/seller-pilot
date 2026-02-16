@@ -16,7 +16,8 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json(productData);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message || "Failed to scrape product" }, { status: 500 });
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to scrape product";
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

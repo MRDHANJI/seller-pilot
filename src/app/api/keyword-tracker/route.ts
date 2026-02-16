@@ -25,7 +25,7 @@ export async function POST(req: Request) {
             status: result.status,
             success: true
         });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message || "Failed to track keyword" }, { status: 500 });
+    } catch {
+        return NextResponse.json({ error: "Failed to track keyword" }, { status: 500 });
     }
 }

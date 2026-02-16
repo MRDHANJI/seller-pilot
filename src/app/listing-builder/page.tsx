@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
     PenTool,
     Sparkles,
-    ChevronRight,
     Layout,
     Type,
     ListOrdered,
@@ -15,6 +14,14 @@ import {
 } from "lucide-react";
 import styles from "./ListingBuilder.module.css";
 
+interface ListingResult {
+    title: string;
+    bullets: string[];
+    description: string;
+    seoScore: number;
+    suggestions: string[];
+}
+
 export default function ListingBuilder() {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
@@ -24,7 +31,7 @@ export default function ListingBuilder() {
         keywords: "",
         marketplace: "Amazon"
     });
-    const [result, setResult] = useState<any>(null);
+    const [result, setResult] = useState<ListingResult | null>(null);
     const [copied, setCopied] = useState<string | null>(null);
 
     const handleCopy = (text: string, id: string) => {
@@ -64,8 +71,8 @@ export default function ListingBuilder() {
                     <PenTool size={28} className="gradient-text" />
                 </div>
                 <div>
-                    <h1 className={styles.title}>AI Listing Builder</h1>
-                    <p className={styles.subtitle}>Generate SEO-optimized product content powered by Amazon's A9 algorithm insights.</p>
+                    <h2 className={styles.title}>AI Listing Builder</h2>
+                    <p className={styles.subtitle}>Generate SEO-optimized product content powered by Amazon&apos;s A9 algorithm insights.</p>
                 </div>
             </header>
 
@@ -97,7 +104,7 @@ export default function ListingBuilder() {
                         <div className={styles.field}>
                             <label>Product Specifications</label>
                             <textarea
-                                placeholder="List key details, materials, what's in the box..."
+                                placeholder="List key details, materials, what&apos;s in the box..."
                                 rows={5}
                                 value={formData.specifications}
                                 onChange={(e) => setFormData({ ...formData, specifications: e.target.value })}

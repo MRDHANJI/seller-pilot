@@ -5,8 +5,6 @@ import {
     BarChart3,
     Upload,
     FileType,
-    AlertCircle,
-    CheckCircle2,
     X,
     TrendingUp,
     Zap,
@@ -16,10 +14,40 @@ import {
 import * as XLSX from "xlsx";
 import styles from "./AdsOptimizer.module.css";
 
+interface Campaign {
+    name: string;
+    type: string;
+    spend: number;
+    sales: number;
+    acos: number;
+    status: string;
+    action: string;
+}
+
+interface Prediction {
+    change: string;
+    projectedSpend: number;
+    projectedSales: number;
+    confidence: number;
+}
+
+interface AnalysisResult {
+    summary: {
+        totalSpend: number;
+        sales: number;
+        acos: number;
+        roas: number;
+        clicks: number;
+        conversions: number;
+    };
+    campaigns: Campaign[];
+    predictions: Prediction[];
+}
+
 export default function AdsOptimizer() {
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
-    const [analysis, setAnalysis] = useState<any>(null);
+    const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,8 +66,8 @@ export default function AdsOptimizer() {
 
         const reader = new FileReader();
         reader.onload = (e) => {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer);
-            const workbook = XLSX.read(data, { type: "array" });
+            const dataBuffer = new Uint8Array(e.target?.result as ArrayBuffer);
+            XLSX.read(dataBuffer, { type: "array" });
 
             // Simulate analysis of various sheets (Sponsored Brands, Display, etc.)
             setTimeout(() => {
@@ -78,7 +106,7 @@ export default function AdsOptimizer() {
                     <BarChart3 size={28} className="gradient-text" />
                 </div>
                 <div>
-                    <h1 className={styles.title}>Ads Optimizer</h1>
+                    <h2 className={styles.title}>Ads Optimizer</h2>
                     <p className={styles.subtitle}>Upload your Amazon Ads XLSX exports for detailed campaign analysis and bid predictions.</p>
                 </div>
             </header>
@@ -153,7 +181,7 @@ export default function AdsOptimizer() {
                     <div className={styles.detailedView}>
                         <div className={`glass-panel ${styles.campaignList}`}>
                             <div className={styles.tableHeader}>
-                                <h3>Campaign Level Help</h3>
+                                <h3>Campaign Level Insights</h3>
                                 <span className={styles.accuracyTag}>100% Accuracy Verified</span>
                             </div>
                             <table className={styles.table}>
@@ -166,7 +194,7 @@ export default function AdsOptimizer() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {analysis.campaigns.map((camp: any, i: number) => (
+                                    {analysis.campaigns.map((camp: Campaign, i: number) => (
                                         <tr key={i}>
                                             <td>
                                                 <div className={styles.campCell}>
@@ -197,7 +225,7 @@ export default function AdsOptimizer() {
                             <div className={`glass-panel ${styles.predictionCard}`}>
                                 <h3><Zap size={18} /> Prediction Engine</h3>
                                 <div className={styles.predictionList}>
-                                    {analysis.predictions.map((p: any, i: number) => (
+                                    {analysis.predictions.map((p: Prediction, i: number) => (
                                         <div key={i} className={styles.predictionItem}>
                                             <div className={styles.predHeader}>
                                                 <span className={styles.predChange}>{p.change}</span>

@@ -16,12 +16,20 @@ import {
 } from "lucide-react";
 import styles from "./KeywordTracker.module.css";
 
+interface RankResult {
+    organicRank: number | null;
+    sponsoredRank: number | null;
+    page: number | null;
+    price: string | null;
+    status: string;
+}
+
 export default function KeywordTracker() {
     const [asin, setAsin] = useState("");
     const [keyword, setKeyword] = useState("");
     const [loading, setLoading] = useState(false);
     const [scanPage, setScanPage] = useState(1);
-    const [result, setResult] = useState<any>(null);
+    const [result, setResult] = useState<RankResult | null>(null);
     const [error, setError] = useState("");
 
     const trackKeyword = async (e: React.FormEvent) => {
@@ -47,9 +55,10 @@ export default function KeywordTracker() {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
             setResult(data);
-        } catch (err: any) {
+        } catch (err: unknown) {
             clearInterval(interval);
-            setError(err.message || "Failed to track keyword");
+            const errorMessage = err instanceof Error ? err.message : "Failed to track keyword";
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -62,8 +71,8 @@ export default function KeywordTracker() {
                     <Target size={28} className="gradient-text" />
                 </div>
                 <div>
-                    <h1 className={styles.title}>Keyword Rank Tracker</h1>
-                    <p className={styles.subtitle}>Track your ASIN's position for specific keywords across multiple pages.</p>
+                    <h2 className={styles.title}>Keyword Rank Tracker</h2>
+                    <p className={styles.subtitle}>Track your ASIN&apos;s position for specific keywords across multiple pages.</p>
                 </div>
             </header>
 
@@ -179,7 +188,7 @@ export default function KeywordTracker() {
                     <div className={`glass-panel ${styles.emptyState}`}>
                         <RefreshCw size={48} className={styles.emptyIcon} />
                         <h3>Analyze your position</h3>
-                        <p>We'll scan up to 10 pages on Amazon.in search results to find exactly where your product appears.</p>
+                        <p>We&apos;ll scan up to 10 pages on Amazon.in search results to find exactly where your product appears.</p>
                     </div>
                 )
             )}

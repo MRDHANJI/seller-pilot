@@ -33,7 +33,7 @@ export async function POST(req: Request) {
             seoScore: seoAnalysis.score,
             suggestions: seoAnalysis.suggestions
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Failed to generate listing" }, { status: 500 });
     }
 }

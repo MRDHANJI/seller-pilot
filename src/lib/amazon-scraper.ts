@@ -79,7 +79,7 @@ export async function scrapeAmazonProduct(asin: string, domain: string = 'amazon
         const reviews = $('#acrCustomerReviewText').text().trim() || $('.a-size-small .a-link-normal').text().trim() || 'N/A';
 
         // 6. Images
-        let imageCount = $('#altImages li.item').length || $('.imageThumbnail').length || 0;
+        const imageCount = $('#altImages li.item').length || $('.imageThumbnail').length || 0;
 
         // 7. Bullets & Description
         const bullets: string[] = [];
@@ -111,8 +111,9 @@ export async function scrapeAmazonProduct(asin: string, domain: string = 'amazon
             bullets,
             url,
         };
-    } catch (error: any) {
-        console.error(`Scraping error for ASIN ${asin}:`, error.message);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`Scraping error for ASIN ${asin}:`, errorMessage);
         return {
             asin,
             title: 'Error',
@@ -127,7 +128,7 @@ export async function scrapeAmazonProduct(asin: string, domain: string = 'amazon
             description: 'N/A',
             bullets: [],
             url,
-            error: error.message,
+            error: errorMessage,
         };
     }
 }
@@ -197,7 +198,7 @@ export async function findAsinRank(asin: string, keyword: string, domain: string
 
             await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             if (page === 1) throw error;
             break;
         }
