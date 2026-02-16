@@ -1,0 +1,351 @@
+.container {
+    padding: 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+}
+
+.headerIcon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+.hiddenInput {
+    display: none;
+}
+
+.uploadZone {
+    padding: 80px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    gap: 32px;
+}
+
+.uploadZone:hover {
+    border-color: var(--accent-primary);
+    background: rgba(59, 130, 246, 0.03);
+}
+
+.uploadIcon {
+    margin-bottom: 20px;
+}
+
+.uploadContent h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.uploadContent p {
+    color: var(--text-muted);
+}
+
+.fileSelected {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px 24px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--accent-primary);
+}
+
+.removeFile {
+    background: transparent;
+    border: none;
+    color: var(--error);
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.analyzeBtn {
+    background: var(--accent-gradient);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 48px;
+    font-weight: 700;
+    font-size: 1rem;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+}
+
+.loadingState {
+    padding: 100px 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.pulseIcon {
+    animation: pulse 1.5s infinite ease-in-out;
+    color: var(--warning);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.summaryCard {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sumLabel {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sumValue {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+}
+
+.detailedView {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 24px;
+    align-items: start;
+}
+
+.campaignList {
+    padding: 32px;
+}
+
+.tableHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.accuracyTag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.1);
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.campCell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.campName {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.campType {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.acosText {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.statusBadge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.keep {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.stop {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+}
+
+.optimize {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+}
+
+.scale {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent-primary);
+}
+
+.actionText {
+    font-size: 0.9rem;
+    color: var(--foreground);
+    font-weight: 500;
+}
+
+.predictionCard {
+    padding: 24px;
+    margin-bottom: 16px;
+}
+
+.predictionCard h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+}
+
+.predictionList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.predictionItem {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+}
+
+.predHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+}
+
+.predChange {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.predConf {
+    font-size: 0.75rem;
+    color: var(--accent-primary);
+    font-weight: 700;
+}
+
+.predMetrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.predMetric {
+    display: flex;
+    flex-direction: column;
+}
+
+.predMetric span:first-child {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.predMetric span:last-child {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.resetBtn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.resetBtn:hover {
+    color: var(--foreground);
+    border-color: var(--foreground);
+}
+
+@media (max-width: 1100px) {
+    .detailedView {
+        grid-template-columns: 1fr;
+    }
+
+    .summaryGrid {
+        grid-template-columns: 1fr;
+    }
+}
