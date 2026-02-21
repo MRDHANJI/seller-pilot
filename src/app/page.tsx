@@ -40,8 +40,8 @@ const MODULES = [
     path: "/keyword-tracker"
   },
   {
-    title: "Bulk Data Scraper",
-    desc: "Extract product details, pricing, and ratings for hundreds of ASINs at once.",
+    title: "Product Intelligence",
+    desc: "Bulk extract product data, pricing, and BSR history for market analysis.",
     icon: Globe,
     path: "/bulk-scraper"
   },

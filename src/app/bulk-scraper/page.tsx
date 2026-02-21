@@ -82,7 +82,7 @@ export default function BulkScraper() {
                     <Globe size={28} className="gradient-text" />
                 </div>
                 <div>
-                    <h2 className={styles.title}>Bulk Data Scraper</h2>
+                    <h2 className={styles.title}>Product Intelligence</h2>
                     <p className={styles.subtitle}>Extract comprehensive product data for multiple ASINs from Amazon.in.</p>
                 </div>
             </header>
