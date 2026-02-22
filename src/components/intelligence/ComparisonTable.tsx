@@ -10,6 +10,7 @@ interface ComparisonTableProps {
 type TabType = 'market' | 'keywords' | 'audit';
 
 export default function ComparisonTable({ data }: ComparisonTableProps) {
+    // Deployment trigger for Enterprise Dashboard PRO
     const [activeTab, setActiveTab] = useState<TabType>('market');
 
     return (
