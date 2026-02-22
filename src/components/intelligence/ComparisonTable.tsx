@@ -51,17 +51,24 @@ export default function ComparisonTable({ data }: ComparisonTableProps) {
                     {data.keywordGaps.map((gap, i) => (
                         <div key={i} className={`glass-panel ${styles.keywordCard}`}>
                             <div className={styles.kwHeader}>
-                                <span className={styles.importance} style={{
-                                    backgroundColor: gap.importance === 'high' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                    color: gap.importance === 'high' ? '#ef4444' : '#f59e0b'
-                                }}>
+                                <span className={`${styles.importance} ${styles[gap.importance]}`}>
                                     {gap.importance}
                                 </span>
-                                <div className={styles.freqBadge}>
-                                    <TrendingUp size={12} /> {gap.competitorFrequency} Comps
+                                <span className={styles.kwType}>{gap.type}</span>
+                            </div>
+                            <div className={styles.kwBody}>
+                                <strong className={styles.kwText}>{gap.keyword}</strong>
+                                <div className={styles.kwStats}>
+                                    <div className={styles.statItem}>
+                                        <TrendingUp size={12} />
+                                        <span>{gap.competitorFrequency} Comps</span>
+                                    </div>
+                                    <div className={styles.statItem}>
+                                        <Zap size={12} />
+                                        <span>{gap.volume.toLocaleString()} Vol</span>
+                                    </div>
                                 </div>
                             </div>
-                            <strong>{gap.keyword}</strong>
                         </div>
                     ))}
                     {data.keywordGaps.length === 0 && (

@@ -93,6 +93,43 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.kwType {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.kwBody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.kwText {
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.kwStats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.statItem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
 }
 
 .importance {
