@@ -114,7 +114,7 @@ export default function BulkScraper() {
                             disabled={loading || !asinsInput}
                         >
                             {loading ? <Loader2 className={styles.spin} size={18} /> : <Play size={18} />}
-                            <span>{loading ? `Scraping (${progress}%)` : "Start Scraping"}</span>
+                            <span>{loading ? `Processing (${progress}%)` : "Get Product Data"}</span>
                         </button>
                     </div>
                 </div>
