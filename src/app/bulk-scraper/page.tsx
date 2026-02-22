@@ -92,7 +92,7 @@ export default function BulkScraper() {
                 </div>
                 <div className={styles.headerContent}>
                     <div>
-                        <h2 className={styles.title}>Product Intelligence</h2>
+                        <h2 className={styles.title}>Product Intelligence <span className="gradient-text">PRO</span></h2>
                         <p className={styles.subtitle}>Extract comprehensive product data and analyze competitor gaps.</p>
                     </div>
                 </div>
