@@ -6,9 +6,17 @@
 
 .header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: space-between;
     gap: 16px;
     margin-bottom: 40px;
+}
+
+.headerContent {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
 }
 
 .headerIcon {
@@ -30,6 +38,43 @@
 .subtitle {
     color: var(--text-muted);
     font-size: 1rem;
+}
+
+.modeToggle {
+    display: flex;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+}
+
+.toggleBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.activeMode {
+    background: var(--accent-gradient);
+    color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.infoBadge {
+    font-size: 0.7rem;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent-primary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
 }
 
 .layout {
@@ -312,6 +357,22 @@
 .seller {
     font-size: 0.85rem;
     font-weight: 500;
+}
+
+.actionBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.actionBtn:hover {
+    transform: translateX(4px);
 }
 
 .emptyTd {

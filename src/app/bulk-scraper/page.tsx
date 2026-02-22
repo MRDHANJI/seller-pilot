@@ -8,29 +8,24 @@ import {
     Play,
     FileSpreadsheet,
     CheckCircle2,
-    Loader2
+    Loader2,
+    Swords,
+    ChevronRight,
+    Search
 } from "lucide-react";
 import csvDownload from "json-to-csv-export";
 import styles from "./BulkScraper.module.css";
-
-interface ScrapedData {
-    asin: string;
-    title: string;
-    price: string;
-    mrp: string;
-    rating: string;
-    reviews: string;
-    bsr: string;
-    category: string;
-    images: number;
-    soldBy: string;
-}
+import { AmazonProductData } from "../../lib/amazon-scraper";
+import { performGapAnalysis, GapAnalysisResult } from "../../lib/gap-analysis";
+import ComparisonTable from "../../components/intelligence/ComparisonTable";
 
 export default function BulkScraper() {
     const [asinsInput, setAsinsInput] = useState("");
     const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<ScrapedData[]>([]);
+    const [results, setResults] = useState<AmazonProductData[]>([]);
     const [progress, setProgress] = useState(0);
+    const [isCompareMode, setIsCompareMode] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState<GapAnalysisResult | null>(null);
 
     const startScraping = async () => {
         const asins = asinsInput.split(/[\s,]+/).filter(a => a.length >= 10);
@@ -39,11 +34,17 @@ export default function BulkScraper() {
             return;
         }
 
+        if (isCompareMode && asins.length < 2) {
+            alert("Comparison Mode requires at least 2 ASINs (Your ASIN + 1 or more competitors).");
+            return;
+        }
+
         setLoading(true);
         setResults([]);
+        setAnalysisResult(null);
         setProgress(0);
 
-        const scrapedData: ScrapedData[] = [];
+        const scrapedData: AmazonProductData[] = [];
         for (let i = 0; i < asins.length; i++) {
             try {
                 const response = await fetch("/api/scrape", {
@@ -59,6 +60,14 @@ export default function BulkScraper() {
                 console.error(`Error scraping ${asins[i]}`, error);
             }
         }
+
+        if (isCompareMode && scrapedData.length >= 2) {
+            const userProduct = scrapedData[0];
+            const competitors = scrapedData.slice(1);
+            const analysis = performGapAnalysis(userProduct, competitors);
+            setAnalysisResult(analysis);
+        }
+
         setLoading(false);
     };
 
@@ -81,20 +90,36 @@ export default function BulkScraper() {
                 <div className={styles.headerIcon}>
                     <Globe size={28} className="gradient-text" />
                 </div>
-                <div>
-                    <h2 className={styles.title}>Product Intelligence</h2>
-                    <p className={styles.subtitle}>Extract comprehensive product data for multiple ASINs from Amazon.in.</p>
+                <div className={styles.headerContent}>
+                    <div>
+                        <h2 className={styles.title}>Product Intelligence</h2>
+                        <p className={styles.subtitle}>Extract comprehensive product data and analyze competitor gaps.</p>
+                    </div>
+                </div>
+                <div className={styles.modeToggle}>
+                    <button
+                        className={`${styles.toggleBtn} ${!isCompareMode ? styles.activeMode : ""}`}
+                        onClick={() => setIsCompareMode(false)}
+                    >
+                        <Search size={16} /> Bulk Extract
+                    </button>
+                    <button
+                        className={`${styles.toggleBtn} ${isCompareMode ? styles.activeMode : ""}`}
+                        onClick={() => setIsCompareMode(true)}
+                    >
+                        <Swords size={16} /> Competitor Gap
+                    </button>
                 </div>
             </header>
 
             <div className={styles.layout}>
                 <div className={`glass-panel ${styles.inputPanel}`}>
                     <div className={styles.inputHeader}>
-                        <h3>Enter ASINs</h3>
-                        <span className={styles.countBadge}>{asinsInput.split(/[\s,]+/).filter(Boolean).length} ASINs</span>
+                        <h3>{isCompareMode ? "Compare ASINs" : "Enter ASINs"}</h3>
+                        {isCompareMode && <span className={styles.infoBadge}>First ASIN = Your Product</span>}
                     </div>
                     <textarea
-                        placeholder="Paste ASINs here (separated by space, comma or new line)..."
+                        placeholder={isCompareMode ? "Enter Your ASIN first, then competitor ASINs..." : "Paste ASINs here (separated by space, comma or new line)..."}
                         value={asinsInput}
                         onChange={(e) => setAsinsInput(e.target.value)}
                         className={styles.asinTextarea}
@@ -103,7 +128,11 @@ export default function BulkScraper() {
                     <div className={styles.inputActions}>
                         <button
                             className={styles.clearBtn}
-                            onClick={() => setAsinsInput("")}
+                            onClick={() => {
+                                setAsinsInput("");
+                                setResults([]);
+                                setAnalysisResult(null);
+                            }}
                             disabled={loading || !asinsInput}
                         >
                             <Trash2 size={16} /> Clear
@@ -113,8 +142,8 @@ export default function BulkScraper() {
                             onClick={startScraping}
                             disabled={loading || !asinsInput}
                         >
-                            {loading ? <Loader2 className={styles.spin} size={18} /> : <Play size={18} />}
-                            <span>{loading ? `Processing (${progress}%)` : "Get Product Data"}</span>
+                            {loading ? <Loader2 className={styles.spin} size={18} /> : (isCompareMode ? <Swords size={18} /> : <Play size={18} />)}
+                            <span>{loading ? `Processing (${progress}%)` : (isCompareMode ? "Start Gap Analysis" : "Get Product Data")}</span>
                         </button>
                     </div>
                 </div>
@@ -123,75 +152,76 @@ export default function BulkScraper() {
                     <div className={styles.outputHeader}>
                         <div className={styles.resultsCount}>
                             <CheckCircle2 size={18} color={results.length > 0 ? "var(--success)" : "var(--text-muted)"} />
-                            <span>{results.length} Products Processed</span>
+                            <span>{results.length} Products Found</span>
                         </div>
-                        <button
-                            className={styles.exportBtn}
-                            onClick={exportData}
-                            disabled={results.length === 0}
-                        >
-                            <Download size={18} />
-                            <span>Download CSV</span>
-                        </button>
+                        {results.length > 0 && !isCompareMode && (
+                            <button className={styles.exportBtn} onClick={exportData}>
+                                <Download size={18} /> <span>Download CSV</span>
+                            </button>
+                        )}
                     </div>
 
-                    <div className={`glass-panel ${styles.tableContainer}`}>
-                        <table className={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th>Product Details</th>
-                                    <th>Price / MRP</th>
-                                    <th>Category</th>
-                                    <th>Stats (BSR/Rating)</th>
-                                    <th>Images</th>
-                                    <th>Sold By</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {results.map((item, i) => (
-                                    <tr key={i} className="animate-fade-in">
-                                        <td>
-                                            <div className={styles.productCell}>
-                                                <span className={styles.asin}>{item.asin}</span>
-                                                <span className={styles.productTitle}>{item.title}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className={styles.priceCell}>
-                                                <span className={styles.price}>₹{item.price}</span>
-                                                <span className={styles.mrp}>₹{item.mrp}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className={styles.category}>{item.category}</span>
-                                        </td>
-                                        <td>
-                                            <div className={styles.statsCell}>
-                                                <span className={styles.bsr}>BSR #{item.bsr}</span>
-                                                <span className={styles.rating}>{item.rating}★ ({item.reviews})</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className={styles.imageCount}>{item.images}</span>
-                                        </td>
-                                        <td>
-                                            <span className={styles.seller}>{item.soldBy}</span>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {results.length === 0 && (
+                    {isCompareMode && analysisResult ? (
+                        <div className="animate-fade-in">
+                            <ComparisonTable data={analysisResult} />
+                        </div>
+                    ) : (
+                        <div className={`glass-panel ${styles.tableContainer}`}>
+                            <table className={styles.table}>
+                                <thead>
                                     <tr>
-                                        <td colSpan={6} className={styles.emptyTd}>
-                                            <div className={styles.emptyContent}>
-                                                <FileSpreadsheet size={48} className={styles.emptyIcon} />
-                                                <p>No data extracted yet. Start a scraping task to see results.</p>
-                                            </div>
-                                        </td>
+                                        <th>Product Details</th>
+                                        <th>Price / MRP</th>
+                                        <th>Stats (BSR/Rating)</th>
+                                        <th>Images</th>
+                                        <th>Action</th>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {results.map((item, i) => (
+                                        <tr key={i} className="animate-fade-in">
+                                            <td>
+                                                <div className={styles.productCell}>
+                                                    <span className={styles.asin}>{item.asin}</span>
+                                                    <span className={styles.productTitle}>{item.title}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className={styles.priceCell}>
+                                                    <span className={styles.price}>₹{item.price}</span>
+                                                    <span className={styles.mrp}>₹{item.mrp}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className={styles.statsCell}>
+                                                    <span className={styles.bsr}>#{item.bsr}</span>
+                                                    <span className={styles.rating}>{item.rating}★ ({item.reviews})</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={styles.imageCount}>{item.images}</span>
+                                            </td>
+                                            <td>
+                                                <a href={item.url} target="_blank" rel="noopener noreferrer" className={styles.actionBtn}>
+                                                    View <ChevronRight size={14} />
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {results.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} className={styles.emptyTd}>
+                                                <div className={styles.emptyContent}>
+                                                    <FileSpreadsheet size={48} className={styles.emptyIcon} />
+                                                    <p>{isCompareMode ? "Waiting for comparison data..." : "No data extracted yet. Start a task to see results."}</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
