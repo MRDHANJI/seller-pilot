@@ -8,15 +8,25 @@ import {
     BarChart2,
     Download,
     Filter,
-    ArrowUpRight,
-    Sparkles
+    ArrowUpRight
 } from "lucide-react";
 import styles from "./KeywordFinder.module.css";
+
+interface KeywordData {
+    id: number;
+    keyword: string;
+    volume: number;
+    trend: number;
+    competition: string;
+    organic: number;
+    sponsored: number;
+    relevance: number;
+}
 
 export default function KeywordFinder() {
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<any[]>([]);
+    const [results, setResults] = useState<KeywordData[]>([]);
 
     const findKeywords = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,7 +34,7 @@ export default function KeywordFinder() {
 
         // Simulating API call
         setTimeout(() => {
-            const mockKeywords = Array.from({ length: 20 }, (_, i) => ({
+            const mockKeywords: KeywordData[] = Array.from({ length: 20 }, (_, i) => ({
                 id: i,
                 keyword: `${query} ${['pro', 'accessories', 'kit', 'best', '2024', 'premium', 'ultra', 'mini'][i % 8]}`,
                 volume: Math.floor(Math.random() * 50000) + 1000,
