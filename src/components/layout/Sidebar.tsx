@@ -19,6 +19,7 @@ const NAV_ITEMS = [
     { name: "Listing Builder", icon: PenTool, path: "/listing-builder" },
     { name: "Keyword Finder", icon: Search, path: "/keyword-finder" },
     { name: "Keyword Tracker", icon: Target, path: "/keyword-tracker" },
+    { name: "Competitive Analysis", icon: BarChart3, path: "/competitive-analysis" },
     { name: "Product Intelligence", icon: Globe, path: "/bulk-scraper" },
     { name: "Ads Optimizer", icon: BarChart3, path: "/ads-optimizer" },
 ];
