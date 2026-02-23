@@ -33,7 +33,7 @@ export default function Sidebar() {
                 <div className={styles.logo}>
                     <div className={styles.logoIcon} />
                 </div>
-                <span className="brand-font">SellerPilot <span className="gradient-text">AI</span></span>
+                <span className="brand-font">SellerPilot <span className="gradient-text">PRO AI</span></span>
             </div>
 
             <nav className={styles.nav}>
