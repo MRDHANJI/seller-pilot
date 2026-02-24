@@ -1,4 +1,13 @@
 import { AmazonProductData } from "./amazon-scraper";
+export interface ContentAudit {
+    asin: string;
+    isUser: boolean;
+    score: number;
+    titleLength: number;
+    bulletCount: number;
+    hasBrandInTitle: boolean;
+    bulletsQuality: 'High' | 'Medium' | 'Low';
+}
 
 export interface CompetitiveMatrix {
     asin: string;

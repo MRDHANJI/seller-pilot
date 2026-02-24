@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, Target, ShieldCheck, AlertCircle, TrendingUp, Info, BarChart3, Search, FileText } from "lucide-react";
+import { Zap, Target, ShieldCheck, AlertCircle, TrendingUp, BarChart3, Search, FileText } from "lucide-react";
 import styles from "./ComparisonTable.module.css";
 import { GapAnalysisResult } from "../../lib/gap-analysis";
 

@@ -4,13 +4,7 @@ import { useState } from "react";
 import {
     BarChart3,
     Swords,
-    ShieldCheck,
-    Zap,
-    TrendingUp,
-    Search,
-    Loader2,
-    CheckCircle2,
-    Info
+    Loader2
 } from "lucide-react";
 import styles from "./CompetitiveAnalysis.module.css";
 import { AmazonProductData } from "../../lib/amazon-scraper";

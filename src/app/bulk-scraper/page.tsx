@@ -9,14 +9,11 @@ import {
     FileSpreadsheet,
     CheckCircle2,
     Loader2,
-    ChevronRight,
-    Search
+    ChevronRight
 } from "lucide-react";
 import csvDownload from "json-to-csv-export";
 import styles from "./BulkScraper.module.css";
 import { AmazonProductData } from "../../lib/amazon-scraper";
-import { performGapAnalysis, GapAnalysisResult } from "../../lib/gap-analysis";
-import ComparisonTable from "../../components/intelligence/ComparisonTable";
 
 export default function BulkScraper() {
     const [asinsInput, setAsinsInput] = useState("");
@@ -26,11 +23,6 @@ export default function BulkScraper() {
 
     const startScraping = async () => {
         const asins = asinsInput.split(/[\s,]+/).filter(a => a.length >= 10);
-        if (asins.length === 0) {
-            alert("Please enter valid ASINs.");
-            return;
-        }
-
         if (asins.length === 0) {
             alert("Please enter valid ASINs.");
             return;
@@ -56,88 +48,83 @@ export default function BulkScraper() {
                 console.error(`Error scraping ${asins[i]}`, error);
             }
         }
+        setLoading(false);
+    };
 
-    }
+    const exportData = () => {
+        if (results.length === 0) return;
+        csvDownload({
+            data: results,
+            filename: `amazon_scrape_${new Date().toISOString().split('T')[0]}`,
+            delimiter: ',',
+            headers: [
+                "ASIN", "Title", "Price", "MRP", "Rating", "Reviews",
+                "BSR", "Sold By", "Image Count", "Description"
+            ]
+        });
+    };
 
-    setLoading(false);
-};
-
-const exportData = () => {
-    if (results.length === 0) return;
-    csvDownload({
-        data: results,
-        filename: `amazon_scrape_${new Date().toISOString().split('T')[0]}`,
-        delimiter: ',',
-        headers: [
-            "ASIN", "Title", "Price", "MRP", "Rating", "Reviews",
-            "BSR", "Sold By", "Image Count", "Description"
-        ]
-    });
-};
-
-return (
-    <div className={styles.container}>
-        <header className={styles.header}>
-            <div className={styles.headerIcon}>
-                <Globe size={28} className="gradient-text" />
-            </div>
-            <div className={styles.headerContent}>
-                <div>
-                    <h2 className={styles.title}>Product Intelligence <span className="gradient-text">PRO</span></h2>
-                    <p className={styles.subtitle}>Extract comprehensive product data and analyze competitor gaps.</p>
+    return (
+        <div className={styles.container}>
+            <header className={styles.header}>
+                <div className={styles.headerIcon}>
+                    <Globe size={28} className="gradient-text" />
                 </div>
-            </div>
-        </header>
-
-        <div className={styles.layout}>
-            <div className={`glass-panel ${styles.inputPanel}`}>
-                <div className={styles.inputHeader}>
-                    <h3>Enter ASINs</h3>
-                </div>
-                <textarea
-                    placeholder="Paste ASINs here (separated by space, comma or new line)..."
-                    value={asinsInput}
-                    onChange={(e) => setAsinsInput(e.target.value)}
-                    className={styles.asinTextarea}
-                    disabled={loading}
-                />
-                <div className={styles.inputActions}>
-                    <button
-                        className={styles.clearBtn}
-                        onClick={() => {
-                            setAsinsInput("");
-                            setResults([]);
-                            setAnalysisResult(null);
-                        }}
-                        disabled={loading || !asinsInput}
-                    >
-                        <Trash2 size={16} /> Clear
-                    </button>
-                    <button
-                        className={styles.startBtn}
-                        onClick={startScraping}
-                        disabled={loading || !asinsInput}
-                    >
-                        {loading ? <Loader2 className={styles.spin} size={18} /> : <Play size={18} />}
-                        <span>{loading ? `Processing (${progress}%)` : "Get Product Data"}</span>
-                    </button>
-                </div>
-            </div>
-
-            <div className={styles.outputArea}>
-                <div className={styles.outputHeader}>
-                    <div className={styles.resultsCount}>
-                        <CheckCircle2 size={18} color={results.length > 0 ? "var(--success)" : "var(--text-muted)"} />
-                        <span>{results.length} Products Found</span>
+                <div className={styles.headerContent}>
+                    <div>
+                        <h2 className={styles.title}>Product Intelligence <span className="gradient-text">PRO</span></h2>
+                        <p className={styles.subtitle}>Extract comprehensive product data and analyze competitor gaps.</p>
                     </div>
-                    {results.length > 0 && (
-                        <button className={styles.exportBtn} onClick={exportData}>
-                            <Download size={18} /> <span>Download CSV</span>
+                </div>
+            </header>
+
+            <div className={styles.layout}>
+                <div className={`glass-panel ${styles.inputPanel}`}>
+                    <div className={styles.inputHeader}>
+                        <h3>Enter ASINs</h3>
+                    </div>
+                    <textarea
+                        placeholder="Paste ASINs here (separated by space, comma or new line)..."
+                        value={asinsInput}
+                        onChange={(e) => setAsinsInput(e.target.value)}
+                        className={styles.asinTextarea}
+                        disabled={loading}
+                    />
+                    <div className={styles.inputActions}>
+                        <button
+                            className={styles.clearBtn}
+                            onClick={() => {
+                                setAsinsInput("");
+                                setResults([]);
+                            }}
+                            disabled={loading || !asinsInput}
+                        >
+                            <Trash2 size={16} /> Clear
                         </button>
-                    )}
+                        <button
+                            className={styles.startBtn}
+                            onClick={startScraping}
+                            disabled={loading || !asinsInput}
+                        >
+                            {loading ? <Loader2 className={styles.spin} size={18} /> : <Play size={18} />}
+                            <span>{loading ? `Processing (${progress}%)` : "Get Product Data"}</span>
+                        </button>
+                    </div>
                 </div>
 
-                {results.length > 0 && (
+                <div className={styles.outputArea}>
+                    <div className={styles.outputHeader}>
+                        <div className={styles.resultsCount}>
+                            <CheckCircle2 size={18} color={results.length > 0 ? "var(--success)" : "var(--text-muted)"} />
+                            <span>{results.length} Products Found</span>
+                        </div>
+                        {results.length > 0 && (
+                            <button className={styles.exportBtn} onClick={exportData}>
+                                <Download size={18} /> <span>Download CSV</span>
+                            </button>
+                        )}
+                    </div>
+
                     <div className={`glass-panel ${styles.tableContainer}`}>
                         <table className={styles.table}>
                             <thead>
@@ -193,9 +180,8 @@ return (
                             </tbody>
                         </table>
                     </div>
-                )}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
 }
