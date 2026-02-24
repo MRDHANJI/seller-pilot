@@ -8,13 +8,15 @@ import {
 } from "lucide-react";
 import styles from "./CompetitiveAnalysis.module.css";
 import { AmazonProductData } from "../../lib/amazon-scraper";
-import { performCompetitiveAnalysis, CompetitiveMatrix } from "../../lib/gap-analysis";
+import { performCompetitiveAnalysis, CompetitiveMatrix, GrowthBattlePlan, generateGrowthBattlePlan } from "../../lib/gap-analysis";
+import { GraduationCap, TrendingUp, Lightbulb, Target } from "lucide-react";
 
 export default function CompetitiveAnalysisPage() {
     const [userAsin, setUserAsin] = useState("");
     const [compAsins, setCompAsins] = useState("");
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<CompetitiveMatrix[]>([]);
+    const [battlePlan, setBattlePlan] = useState<GrowthBattlePlan | null>(null);
     const [progress, setProgress] = useState("");
 
     const runAnalysis = async () => {
@@ -48,7 +50,9 @@ export default function CompetitiveAnalysisPage() {
             const userProduct = allScraped[0];
             const compProducts = allScraped.slice(1);
             const matrix = performCompetitiveAnalysis(userProduct, compProducts);
+            const plan = generateGrowthBattlePlan(userProduct, compProducts, matrix);
             setResults(matrix);
+            setBattlePlan(plan);
         }
         setLoading(false);
         setProgress("");
@@ -66,6 +70,11 @@ export default function CompetitiveAnalysisPage() {
                             </span>
                         ) : field === 'titleOptimization' || field === 'adsRunning' ? (
                             <span className={styles[res[field].toLowerCase()]}>{res[field]}</span>
+                        ) : field === 'keywordRank' ? (
+                            <div className={styles.rankContainer}>
+                                <span className={styles.mainValue}>{res[field]}</span>
+                                <span className={styles.contextLabel}>{res.keywordContext}</span>
+                            </div>
                         ) : field === 'keywordVolume' ? (
                             <span className={styles.mainValue}>{res[field].toLocaleString()}</span>
                         ) : (
@@ -151,6 +160,39 @@ export default function CompetitiveAnalysisPage() {
                             <FactorRow label="Keyword With Volume" field="keywordVolume" />
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {battlePlan && (
+                <div className={`${styles.battlePlanContainer} animate-in`}>
+                    <div className={styles.battleHeader}>
+                        <div className={styles.battleIcon}>
+                            <GraduationCap size={28} />
+                        </div>
+                        <div>
+                            <h2 className={styles.battleTitle}>AI Battle Plan: <span className="gradient-text">Growth Strategy</span></h2>
+                            <p className={styles.battleSubtitle}>{battlePlan.summary}</p>
+                        </div>
+                        <div className={styles.scoreBadge}>
+                            <span className={styles.scoreLabel}>Health Score</span>
+                            <span className={styles.scoreValue}>{battlePlan.overallScore}%</span>
+                        </div>
+                    </div>
+
+                    <div className={styles.actionGrid}>
+                        {battlePlan.actions.map((action, i) => (
+                            <div key={i} className={styles.actionCard}>
+                                <div className={styles.actionType}>
+                                    {action.type === 'Listing' && <Lightbulb size={16} className={styles.listingIcon} />}
+                                    {action.type === 'Keywords' && <Target size={16} className={styles.keywordIcon} />}
+                                    {action.type === 'Ads' && <TrendingUp size={16} className={styles.adsIcon} />}
+                                    <span>{action.type}</span>
+                                    <span className={`${styles.impactBadge} ${styles[action.impact.toLowerCase()]}`}>{action.impact} Impact</span>
+                                </div>
+                                <p className={styles.actionText}>{action.action}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 

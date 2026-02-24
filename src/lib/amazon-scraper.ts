@@ -32,7 +32,10 @@ export interface AmazonProductData {
     bsr: string;
     description: string;
     bullets: string[];
+    hasAPlus: boolean;
+    hasStore: boolean;
     url: string;
+    targetKeyword?: string;
     error?: string;
 }
 
@@ -90,6 +93,11 @@ export async function scrapeAmazonProduct(asin: string, domain: string = 'amazon
 
         const description = $('#productDescription').text().trim() || $('.aplus-v2').text().trim() || 'N/A';
 
+        // 8. A+ Content & Brand Store Precise Detection
+        const hasAPlus = $('.aplus-v2, #aplus, .aplus-module').length > 0;
+        const brandStoreLink = $('#bylineInfo').attr('href') || '';
+        const hasStore = brandStoreLink.includes('/stores/') || brandStoreLink.includes('/node/') || $('.s-brand-store-banner').length > 0;
+
         // 8. BSR
         let bsr = 'N/A';
         const bodyText = $('body').text();
@@ -109,6 +117,8 @@ export async function scrapeAmazonProduct(asin: string, domain: string = 'amazon
             bsr,
             description: description.substring(0, 500), // Cap for preview
             bullets,
+            hasAPlus,
+            hasStore,
             url,
         };
     } catch (error: unknown) {
@@ -127,6 +137,8 @@ export async function scrapeAmazonProduct(asin: string, domain: string = 'amazon
             bsr: 'N/A',
             description: 'N/A',
             bullets: [],
+            hasAPlus: false,
+            hasStore: false,
             url,
             error: errorMessage,
         };

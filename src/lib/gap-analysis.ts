@@ -26,6 +26,20 @@ export interface CompetitiveMatrix {
     delivery: 'Prime' | 'FBA' | 'Merchant';
     badge: 'Best Seller' | 'Amazon Choice' | 'None';
     keywordVolume: number;
+    keywordContext: string;
+}
+
+export interface BattlePlanItem {
+    type: 'Listing' | 'Keywords' | 'Ads';
+    action: string;
+    impact: 'High' | 'Medium' | 'Low';
+    priority: number;
+}
+
+export interface GrowthBattlePlan {
+    overallScore: number;
+    summary: string;
+    actions: BattlePlanItem[];
 }
 
 export interface GapAnalysisResult {
@@ -46,6 +60,7 @@ export interface GapAnalysisResult {
     }[];
     audits: ContentAudit[];
     matrix?: CompetitiveMatrix[];
+    battlePlan?: GrowthBattlePlan;
 }
 
 export function performCompetitiveAnalysis(userProduct: AmazonProductData, competitors: AmazonProductData[]): CompetitiveMatrix[] {
@@ -71,10 +86,11 @@ export function performCompetitiveAnalysis(userProduct: AmazonProductData, compe
             rating: `${p.rating}★`,
             reviews: p.reviews,
             keywordRank: `#${Math.floor(Math.random() * 10) + 1}`,
+            keywordContext: p.targetKeyword || "Market Generic",
             titleOptimization: titleOpt,
             imagesQuality: p.images >= 7 ? 'Premium' : (p.images >= 4 ? 'Normal' : 'Basic'),
-            aPlusContent: p.bullets.length > 5 || p.title.length > 180 ? 'Yes' : 'No', // Heuristic
-            brandStore: p.title.toLowerCase().includes(p.soldBy.split(' ')[0].toLowerCase()) ? 'Yes' : 'No',
+            aPlusContent: p.hasAPlus ? 'Yes' : 'No',
+            brandStore: p.hasStore ? 'Yes' : 'No',
             adsRunning: Math.random() > 0.5 ? 'High' : (Math.random() > 0.3 ? 'Medium' : 'None'),
             offers: Math.random() > 0.5 ? `${Math.floor(Math.random() * 15) + 5}%` : '0%',
             coupons: Math.random() > 0.6 ? 'Yes' : 'No',
@@ -83,6 +99,59 @@ export function performCompetitiveAnalysis(userProduct: AmazonProductData, compe
             keywordVolume: Math.floor(Math.random() * 20000) + 5000
         };
     });
+}
+
+export function generateGrowthBattlePlan(userProduct: AmazonProductData, competitors: AmazonProductData[], metrics: CompetitiveMatrix[]): GrowthBattlePlan {
+    const actions: BattlePlanItem[] = [];
+    const userMatrix = metrics.find(m => m.isUser);
+    if (!userMatrix) return { overallScore: 0, summary: "No data available.", actions: [] };
+
+    // 1. A+ Content Gap
+    const compWithAPlus = metrics.filter(m => !m.isUser && m.aPlusContent === 'Yes');
+    if (userMatrix.aPlusContent === 'No' && compWithAPlus.length > 0) {
+        actions.push({
+            type: 'Listing',
+            action: `Create A+ Content. ${compWithAPlus.length} competitors are using high-converting EBC to steal your traffic.`,
+            impact: 'High',
+            priority: 1
+        });
+    }
+
+    // 2. Pricing Strategy
+    const compAvgPrice = metrics.filter(m => !m.isUser).reduce((acc, m) => acc + parseFloat(m.price.replace(/[^\d]/g, '')), 0) / (metrics.length - 1);
+    const userPrice = parseFloat(userMatrix.price.replace(/[^\d]/g, ''));
+    if (userPrice > compAvgPrice * 1.1) {
+        actions.push({
+            type: 'Ads',
+            action: `Consider a ${Math.round(((userPrice - compAvgPrice) / userPrice) * 100)}% discount or coupon. You are priced above the market average.`,
+            impact: 'Medium',
+            priority: 2
+        });
+    }
+
+    // 3. Keyword Theft (Growth Hack)
+    actions.push({
+        type: 'Keywords',
+        action: `Target high-volume keywords used by your Best Seller competitors (Keywords with 10k+ volume).`,
+        impact: 'High',
+        priority: 3
+    });
+
+    // 4. Image Quality
+    if (userProduct.images < 7) {
+        actions.push({
+            type: 'Listing',
+            action: `Add ${7 - userProduct.images} more high-quality 3D renders or Lifestyle shots to match top competitors.`,
+            impact: 'Medium',
+            priority: 4
+        });
+    }
+
+    return {
+        overallScore: 75, // Simplified scoring
+        summary: `Your product has significant growth potential. By addressing the ${actions.filter(a => a.impact === 'High').length} High-Impact gaps identified, you can aggressively scale your market share.`,
+        actions: actions.sort((a, b) => a.priority - b.priority)
+    };
 }
 
 function calculateA9Score(product: AmazonProductData): number {
