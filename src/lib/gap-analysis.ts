@@ -30,10 +30,11 @@ export interface CompetitiveMatrix {
 }
 
 export interface BattlePlanItem {
-    type: 'Listing' | 'Keywords' | 'Ads';
+    type: 'Listing' | 'Keywords' | 'Ads' | 'Strategy';
     action: string;
     impact: 'High' | 'Medium' | 'Low';
     priority: number;
+    dataTags?: string[];
 }
 
 export interface GrowthBattlePlan {
@@ -79,6 +80,9 @@ export function performCompetitiveAnalysis(userProduct: AmazonProductData, compe
         const delivery: CompetitiveMatrix['delivery'] = p.soldBy.toLowerCase().includes('amazon') ? 'Prime' : (Math.random() > 0.3 ? 'FBA' : 'Merchant');
 
         // Matrix Row Calculation
+        const gaps = performGapAnalysis(userProduct, competitors);
+        const topGap = gaps.keywordGaps.filter(g => g.isMandatory)[0]?.keyword || "Market Generic";
+
         return {
             asin: p.asin,
             isUser,
@@ -86,7 +90,7 @@ export function performCompetitiveAnalysis(userProduct: AmazonProductData, compe
             rating: `${p.rating}★`,
             reviews: p.reviews,
             keywordRank: `#${Math.floor(Math.random() * 10) + 1}`,
-            keywordContext: p.targetKeyword || "Market Generic",
+            keywordContext: p.targetKeyword || topGap,
             titleOptimization: titleOpt,
             imagesQuality: p.images >= 7 ? 'Premium' : (p.images >= 4 ? 'Normal' : 'Basic'),
             aPlusContent: p.hasAPlus ? 'Yes' : 'No',
@@ -113,43 +117,70 @@ export function generateGrowthBattlePlan(userProduct: AmazonProductData, competi
             type: 'Listing',
             action: `Create A+ Content. ${compWithAPlus.length} competitors are using high-converting EBC to steal your traffic.`,
             impact: 'High',
-            priority: 1
+            priority: 1,
+            dataTags: ['EBC', 'A+ Modules']
         });
     }
 
     // 2. Pricing Strategy
-    const compAvgPrice = metrics.filter(m => !m.isUser).reduce((acc, m) => acc + parseFloat(m.price.replace(/[^\d]/g, '')), 0) / (metrics.length - 1);
+    const competitorsOnly = metrics.filter(m => !m.isUser);
+    const compAvgPrice = competitorsOnly.reduce((acc, m) => acc + parseFloat(m.price.replace(/[^\d]/g, '')), 0) / (competitorsOnly.length);
     const userPrice = parseFloat(userMatrix.price.replace(/[^\d]/g, ''));
-    if (userPrice > compAvgPrice * 1.1) {
+
+    if (userPrice > compAvgPrice * 1.05) {
+        const diff = userPrice - compAvgPrice;
         actions.push({
             type: 'Ads',
-            action: `Consider a ${Math.round(((userPrice - compAvgPrice) / userPrice) * 100)}% discount or coupon. You are priced above the market average.`,
+            action: `Your price (₹${userPrice}) is ₹${Math.round(diff)} above the competitor average (₹${Math.round(compAvgPrice)}). Consider a coupon to match market expectations.`,
             impact: 'Medium',
-            priority: 2
+            priority: 2,
+            dataTags: [`Avg: ₹${Math.round(compAvgPrice)}`, `Delta: +₹${Math.round(diff)}`]
         });
     }
 
-    // 3. Keyword Theft (Growth Hack)
+    // 3. Keyword Theft (Data-Driven)
+    const gaps = performGapAnalysis(userProduct, competitors);
+    const topKeywords = gaps.keywordGaps.filter(g => g.isMandatory).map(g => g.keyword).slice(0, 5);
+
+    if (topKeywords.length > 0) {
+        actions.push({
+            type: 'Keywords',
+            action: `Target these high-volume "Mandatory" keywords found in all competitor listings but missing from yours.`,
+            impact: 'High',
+            priority: 3,
+            dataTags: topKeywords
+        });
+    }
+
+    // 4. Strategic Sale Boosting Guide
     actions.push({
-        type: 'Keywords',
-        action: `Target high-volume keywords used by your Best Seller competitors (Keywords with 10k+ volume).`,
+        type: 'Strategy',
+        action: `Sales Booster: Implement the "Keyword Anchor" strategy. Use your top competitor's primary keyword in the first 50 characters of your title.`,
         impact: 'High',
-        priority: 3
+        priority: 0,
+        dataTags: ['Sale Booster', 'Pro Strategy']
     });
 
-    // 4. Image Quality
+    // 5. Image Quality
     if (userProduct.images < 7) {
         actions.push({
             type: 'Listing',
-            action: `Add ${7 - userProduct.images} more high-quality 3D renders or Lifestyle shots to match top competitors.`,
+            action: `Add ${7 - userProduct.images} more high-quality images. Top competitors average 7+ images including lifestyle/infographics.`,
             impact: 'Medium',
-            priority: 4
+            priority: 4,
+            dataTags: ['Visual Depth', 'Conversion']
         });
     }
 
+    let score = 95;
+    if (userMatrix.aPlusContent === 'No') score -= 15;
+    if (userPrice > compAvgPrice * 1.1) score -= 10;
+    if (topKeywords.length > 3) score -= 15;
+    if (userProduct.images < 5) score -= 10;
+
     return {
-        overallScore: 75, // Simplified scoring
-        summary: `Your product has significant growth potential. By addressing the ${actions.filter(a => a.impact === 'High').length} High-Impact gaps identified, you can aggressively scale your market share.`,
+        overallScore: Math.max(0, score),
+        summary: `Your product listing is ${score > 80 ? 'strong' : 'underperforming'}. By fixing the ${actions.filter(a => a.impact === 'High').length} High-Impact gaps, you can capture up to ${topKeywords.length * 5}% more traffic.`,
         actions: actions.sort((a, b) => a.priority - b.priority)
     };
 }

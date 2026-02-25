@@ -186,10 +186,18 @@ export default function CompetitiveAnalysisPage() {
                                     {action.type === 'Listing' && <Lightbulb size={16} className={styles.listingIcon} />}
                                     {action.type === 'Keywords' && <Target size={16} className={styles.keywordIcon} />}
                                     {action.type === 'Ads' && <TrendingUp size={16} className={styles.adsIcon} />}
+                                    {action.type === 'Strategy' && <Swords size={16} className={styles.strategyIcon} />}
                                     <span>{action.type}</span>
                                     <span className={`${styles.impactBadge} ${styles[action.impact.toLowerCase()]}`}>{action.impact} Impact</span>
                                 </div>
                                 <p className={styles.actionText}>{action.action}</p>
+                                {action.dataTags && action.dataTags.length > 0 && (
+                                    <div className={styles.dataTags}>
+                                        {action.dataTags.map((tag, j) => (
+                                            <span key={j} className={styles.dataTag}>{tag}</span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
