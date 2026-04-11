@@ -359,9 +359,13 @@
 }
 
 .dualUploadGrid {
+    display: none; /* Deprecated in favor of triple */
+}
+
+.tripleUploadGrid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
 }
 
 .actionRow {
