@@ -12,21 +12,13 @@ import {
     DollarSign,
     Lightbulb,
     PieChart,
-    Crosshair
+    Crosshair,
+    Printer,
+    FileSearch,
+    Wrench
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import styles from "./AdsOptimizer.module.css";
-
-interface Campaign {
-    name: string;
-    type: string;
-    spend: number;
-    sales: number;
-    acos: number;
-    roas: number;
-    status: string;
-    action: string;
-}
 
 interface MatchTypeData {
     exact: { spend: number, sales: number, roas: number },
@@ -41,12 +33,10 @@ interface TargetingData {
     audience: { spend: number, sales: number, cpc: number, clicks: number }
 }
 
-interface HighConfidenceSuggestion {
-    title: string;
-    description: string;
-    impact: 'High' | 'Medium';
-    confidence: number;
-    dataPoint: string;
+interface AgencyReport {
+    currentStructure: string[];
+    proposedStructure: string[];
+    pitchSummary: string;
 }
 
 interface DeepAnalysisResult {
@@ -59,10 +49,9 @@ interface DeepAnalysisResult {
         sourceFiles: string[];
         sheetsParsed: number;
     };
-    campaigns: Campaign[];
     matchTypes: MatchTypeData;
     targeting: TargetingData;
-    suggestions: HighConfidenceSuggestion[];
+    agencyReport: AgencyReport;
 }
 
 export default function AdsOptimizer() {
@@ -97,7 +86,6 @@ export default function AdsOptimizer() {
 
         const primaryFile = targetFile || structureFile || bulkFile;
 
-        // Keep track of what we are analyzing to give context-aware suggestions
         const sources: string[] = [];
         if (bulkFile) sources.push('Bulk Operations');
         if (structureFile) sources.push('Ad Structure');
@@ -110,7 +98,6 @@ export default function AdsOptimizer() {
                     const dataBuffer = new Uint8Array(e.target?.result as ArrayBuffer);
                     const workbook = XLSX.read(dataBuffer, { type: "array" });
                     
-                    // Aggregation Variables
                     let totalSpend = 0;
                     let totalSales = 0;
                     let totalClicks = 0;
@@ -129,38 +116,42 @@ export default function AdsOptimizer() {
                         audience: { spend: 0, sales: 0, cpc: 0, clicks: 0 }
                     };
 
-                    // Loop over ALL sheets to support Bulk Ops 5-subsheets logic
                     workbook.SheetNames.forEach(sheetName => {
                         const worksheet = workbook.Sheets[sheetName];
-                        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" }) as Array<Record<string, string | number | undefined>>;
+                        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" }) as Array<Record<string, string | number | boolean | undefined>>;
                         
-                        // Only count sheets that actually have data rows (skip empty portofolio summaries)
                         if (rows.length > 0) {
                             sheetsParsedCount++;
                             
                             rows.forEach(rawRow => {
-                                const row: Record<string, string | number | undefined> = {};
+                                const row: Record<string, string | number | boolean | undefined> = {};
                                 Object.keys(rawRow).forEach(k => {
                                     if (k) row[k.trim().toLowerCase()] = rawRow[k];
                                 });
 
-                                // Dynamically map common Amazon headers across all ad formats
-                                const spendStr = String(row['spend'] || row['spend(inr)'] || row['spend (inr)'] || 0).replace(/[^0-9.-]+/g,"");
-                                const salesStr = String(row['sales'] || row['14 day total sales'] || row['7 day total sales'] || row['sales(inr)'] || row['sales (inr)'] || row['total sales'] || 0).replace(/[^0-9.-]+/g,"");
-                                const clicksStr = String(row['clicks'] || 0).replace(/[^0-9.-]+/g,"");
+                                // Extremely Aggressive Fuzzy Column Matching
+                                const scanKey = (keyword: string) => {
+                                    const match = Object.keys(row).find(k => k.includes(keyword));
+                                    return match ? String(row[match]) : "";
+                                };
+
+                                const spendStr = scanKey('spend').replace(/[^0-9.-]+/g,"");
+                                const salesStr = scanKey('sale').replace(/[^0-9.-]+/g,"");
+                                const clicksStr = scanKey('click').replace(/[^0-9.-]+/g,"");
 
                                 const spend = Number(spendStr) || 0;
                                 const sales = Number(salesStr) || 0;
                                 const clicks = Number(clicksStr) || 0;
 
-                                const matchType = String(row['match type'] || row['match_type'] || "").toLowerCase();
-                                const targetingExp = String(row['targeting expression'] || row['keyword text'] || row['keyword'] || row['targeting'] || row['target'] || "").toLowerCase();
+                                const matchType = scanKey('match').toLowerCase();
+                                const targetingExp1 = scanKey('target').toLowerCase();
+                                const targetingExp2 = scanKey('keyword').toLowerCase();
+                                const targetingExp = targetingExp1 || targetingExp2;
 
                                 totalSpend += spend;
                                 totalSales += sales;
                                 totalClicks += clicks;
 
-                                // Match Type aggregation
                                 if (matchType.includes('exact')) {
                                     matchTypes.exact.spend += spend;
                                     matchTypes.exact.sales += sales;
@@ -170,22 +161,20 @@ export default function AdsOptimizer() {
                                 } else if (matchType.includes('broad')) {
                                     matchTypes.broad.spend += spend;
                                     matchTypes.broad.sales += sales;
-                                } else if (matchType.includes('-') || matchType === '-' || (matchType === '' && spend > 0 && !targetingExp)) { 
-                                    // Fallback heuristics for auto if targeting is blank but spend exists
+                                } else if (matchType.includes('auto') || matchType.includes('-') || (spend > 0 && !matchType)) { 
                                     matchTypes.auto.spend += spend;
                                     matchTypes.auto.sales += sales;
                                 }
 
-                                // Targeting Type aggregation
                                 if (targetingExp.includes('asin=') || targetingExp.includes('category=') || targetingExp.includes('product')) {
                                     targeting.product.spend += spend;
                                     targeting.product.sales += sales;
                                     targeting.product.clicks += clicks;
-                                } else if (targetingExp.includes('audience') || targetingExp.includes('views') || targetingExp.includes('purchases')) {
+                                } else if (targetingExp.includes('audience') || targetingExp.includes('view') || targetingExp.includes('purchase')) {
                                     targeting.audience.spend += spend;
                                     targeting.audience.sales += sales;
                                     targeting.audience.clicks += clicks;
-                                } else if (targetingExp !== '' && targetingExp !== '*') {
+                                } else if (targetingExp) {
                                     targeting.keyword.spend += spend;
                                     targeting.keyword.sales += sales;
                                     targeting.keyword.clicks += clicks;
@@ -194,13 +183,13 @@ export default function AdsOptimizer() {
                         }
                     });
 
-                    // Calculate derivatives
+                    // Avoid UI Infinity or NaN
                     const calcRoas = (sales: number, spend: number) => spend > 0 ? parseFloat((sales / spend).toFixed(2)) : 0;
                     const calcCpc = (spend: number, clicks: number) => clicks > 0 ? parseFloat((spend / clicks).toFixed(2)) : 0;
 
                     const globalRoas = calcRoas(totalSales, totalSpend);
                     const globalCpc = calcCpc(totalSpend, totalClicks);
-                    const globalAcos = totalSales > 0 ? parseFloat(((totalSpend / totalSales) * 100).toFixed(2)) : 0;
+                    const globalAcos = totalSales > 0 ? Math.round((totalSpend / totalSales) * 100) : 0;
 
                     matchTypes.exact.roas = calcRoas(matchTypes.exact.sales, matchTypes.exact.spend);
                     matchTypes.phrase.roas = calcRoas(matchTypes.phrase.sales, matchTypes.phrase.spend);
@@ -211,73 +200,43 @@ export default function AdsOptimizer() {
                     targeting.product.cpc = calcCpc(targeting.product.spend, targeting.product.clicks);
                     targeting.audience.cpc = calcCpc(targeting.audience.spend, targeting.audience.clicks);
 
-                    // --- CONTEXT AWARE SUGGESTION ENGINE ---
-                    const suggestions: HighConfidenceSuggestion[] = [];
+                    // Context-Aware Agency Generator Logic
+                    const exactRatio = totalSpend > 0 ? Math.round((matchTypes.exact.spend / totalSpend) * 100) : 0;
+                    const broadRatio = totalSpend > 0 ? Math.round((matchTypes.broad.spend / totalSpend) * 100) : 0;
 
-                    // 1. Bulk Operations Context Logic (Multi-sheet analysis)
-                    if (sources.includes('Bulk Operations')) {
-                        suggestions.push({
-                            title: "Format Budget Reallocation (Bulk Insights)",
-                            description: `Based on your multi-sheet Bulk upload, we analyzed Sponsored Products vs Brands vs Display. Since your overall CPC is ₹${globalCpc}, shift 15% budget to the ad format (SP/SB/SD) yielding the lowest ACOS immediately to scale efficiently.`,
-                            impact: 'High',
-                            confidence: 94,
-                            dataPoint: `Derived from ${sheetsParsedCount} sub-sheets.`
-                        });
-                    }
+                    const report: AgencyReport = {
+                        currentStructure: [
+                            `Account is tracking ₹${totalSpend.toLocaleString()} in ad spend driving a global ACOS of ${globalAcos}%.`,
+                            `Keyword topology shows ${exactRatio}% locked in Exact Match vs ${broadRatio}% in Broad Match discovery.`,
+                            `Actual Exact Match ROAS is sitting at ${matchTypes.exact.roas}x, compared to Broad Match at ${matchTypes.broad.roas}x.`,
+                            `Product (ASIN) Targeting CPC averages ₹${targeting.product.cpc} vs Keyword CPC at ₹${targeting.keyword.cpc}.`
+                        ],
+                        proposedStructure: [],
+                        pitchSummary: ''
+                    };
 
-                    // 2. Ad Structure Matrix Logic
                     if (sources.includes('Ad Structure')) {
-                        if (matchTypes.exact.roas > matchTypes.broad.roas && matchTypes.exact.roas > 1.5) {
-                            suggestions.push({
-                                title: "Structural Bid Stepping (Matrix Insights)",
-                                description: `Your Ad Structure matrix reveals Exact match (ROAS ${matchTypes.exact.roas}x) outperforms Broad (${matchTypes.broad.roas}x). Pause under-performing broad keywords and execute a Top-of-Search 20% bid multiplier exclusively on the Exact campaigns.`,
-                                impact: 'High',
-                                confidence: 96,
-                                dataPoint: `Structure Gap: Exact (${matchTypes.exact.roas}x) vs Broad (${matchTypes.broad.roas}x)`
-                            });
-                        } else {
-                            suggestions.push({
-                                title: "Campaign Consolidation (Matrix Insights)",
-                                description: `Your Ad Structure reveals fragmented spend. Consolidate campaigns with less than 5 conversions into your single highest-performing manual campaign to force Amazon's algorithm to learn faster.`,
-                                impact: 'Medium',
-                                confidence: 88,
-                                dataPoint: `Structural Efficiency`
-                            });
-                        }
-                    }
-
-                    // 3. Targeting Strategy Logic
-                    if (sources.includes('Targeting Data') || targeting.product.spend > 0) {
-                        const ptCpc = targeting.product.cpc || 0;
-                        const kwCpc = targeting.keyword.cpc || 0;
-                        if (ptCpc > 0 && ptCpc < kwCpc) {
-                            suggestions.push({
-                                title: "Defensive Targeting Expansion",
-                                description: `Your Target file shows Product Targeting CPC (₹${ptCpc}) is cheaper than Keyword CPC (₹${kwCpc}). Launch offensive ASIN targeting against competitors with higher prices or lower reviews immediately.`,
-                                impact: 'High',
-                                confidence: 92,
-                                dataPoint: `Targeting Arbitrage: PT (₹${ptCpc}) vs KWD (₹${kwCpc})`
-                            });
-                        } else {
-                            suggestions.push({
-                                title: "Search Term Extraction (Targeting File)",
-                                description: `Review the provided Targeting report to pull the top 10 highest-converting search terms and add them as ASIN/Exact targets with a 30% bid premium to dominate share of voice.`,
-                                impact: 'High',
-                                confidence: 91,
-                                dataPoint: `Placement Optimization`
-                            });
-                        }
-                    }
-
-                    // Fallback
-                    if (suggestions.length === 0) {
-                        suggestions.push({
-                            title: "Global ACOS Bid Reduction",
-                            description: `Implement automated 10% bid stepping down on any target exceeding your ACOS threshold to stabilize margins.`,
-                            impact: 'Medium',
-                            confidence: 85,
-                            dataPoint: `Global ACOS: ${globalAcos}%`
-                        });
+                        report.proposedStructure = [
+                            `Restructure instantly: Extract the top performing search terms and migrate into isolated Single Keyword Ad Groups (SKAGs).`,
+                            `Pause all Broad campaigns currently exceeding ${globalAcos + 5}% ACOS to instantly trap bleeding margins.`,
+                            `Apply a 20% 'Top of Search' placement modifier uniquely to your Exact match campaigns to block competitors capturing highest intent clicks.`
+                        ];
+                        report.pitchSummary = `The current ad architecture has significant structural bleed. By migrating to a heavily controlled SKAG setup and choking the Broad-match budget drain, we can re-route those exact funds into your high-ROAS (${matchTypes.exact.roas}x) Exact tiers. This structurally guarantees an immediate lift in global profitability.`;
+                    } else if (sources.includes('Bulk Operations')) {
+                         report.proposedStructure = [
+                            `Halt under-performing portfolio bleed: Run a Pivot block across Sponsored Products vs Sponsored Brands.`,
+                            `Implement an aggressive 15% downward bid automation on the worst-performing ad format.`,
+                            `Launch Defense nodes: Bid strictly on your own top 3 ASINs to prevent the ${globalAcos}% ACOS from leaking to cheaper competitor substitutions.`
+                        ];
+                        report.pitchSummary = `Multi-format cannibalization is visible across the ${sheetsParsedCount} parsed sub-sheets. Instead of managing individual targets, the macro-strategy requires shifting total budget caps between Sponsored Products and Sponsored Brands to favor whichever format possesses cheaper acquisition costs presently.`;
+                    } else {
+                        // Targeting Logic
+                         report.proposedStructure = [
+                            `Exploit Targeting Arbitrage: Your Product Targeting (PT) is running at ₹${targeting.product.cpc} CPC. Expand ASIN conquesting immediately on competitors priced 5%+ higher.`,
+                            `Extract Exact Match dominance: Pull raw Search Term reports and filter exclusively for 3-word long-tail queries.`,
+                            `Establish Audience Defense: Allocate 10% budget entirely to remarketing views to guarantee conversions on the 2nd touchpoint.`
+                        ];
+                        report.pitchSummary = `Your placement density displays actionable arbitrage. We must isolate those highly efficient Product Targets and rapidly expand ASIN-conquesting logic before competitors bid up the defensive real estate.`;
                     }
 
                     setAnalysis({
@@ -292,11 +251,7 @@ export default function AdsOptimizer() {
                         },
                         matchTypes: matchTypes,
                         targeting: targeting,
-                        campaigns: [
-                            { name: "Top Keyword Target (Parsed)", type: "System Identified", spend: parseFloat((totalSpend * 0.2).toFixed(2)), sales: parseFloat((totalSales * 0.35).toFixed(2)), acos: globalAcos > 0 ? parseFloat((globalAcos * 0.8).toFixed(2)) : 0, roas: parseFloat((globalRoas * 1.25).toFixed(2)), status: "Scale", action: "Increase bids 20%" },
-                            { name: "Broad Match Discovery (Parsed)", type: "System Identified", spend: parseFloat((totalSpend * 0.15).toFixed(2)), sales: parseFloat((totalSales * 0.05).toFixed(2)), acos: globalAcos > 0 ? parseFloat((globalAcos * 1.5).toFixed(2)) : 0, roas: parseFloat((globalRoas * 0.6).toFixed(2)), status: "Stop", action: "Pause and harvest targets." }
-                        ],
-                        suggestions: suggestions
+                        agencyReport: report
                     });
 
                 } catch (error) {
@@ -322,18 +277,18 @@ export default function AdsOptimizer() {
 
     return (
         <div className={styles.container}>
-            <header className={styles.header}>
+            <header className={`${styles.header} ${styles.hideOnPrint}`}>
                 <div className={styles.headerIcon}>
                     <BarChart3 size={28} className="gradient-text" />
                 </div>
                 <div>
                     <h2 className={styles.title}>Deep Intelligence Ads Optimizer</h2>
-                    <p className={styles.subtitle}>Real-time multi-sheet parsing of your Amazon Ads exports for extreme precision multi-layered campaign analysis.</p>
+                    <p className={styles.subtitle}>Fuzzy Column extraction and Agency Client Output reporting.</p>
                 </div>
             </header>
 
             {!analysis && !loading && (
-                <div className={styles.uploadSection}>
+                <div className={`${styles.uploadSection} ${styles.hideOnPrint}`}>
                     <div className={styles.tripleUploadGrid}>
                         <div className={`glass-panel ${styles.uploadZone}`} onClick={() => bulkInputRef.current?.click()}>
                             <input type="file" ref={bulkInputRef} className={styles.hiddenInput} onChange={(e) => handleFileUpload(e, 'bulk')} accept=".xlsx, .xls, .csv" />
@@ -390,13 +345,13 @@ export default function AdsOptimizer() {
                 <div className={`glass-panel ${styles.loadingState}`}>
                     <Zap size={48} className={styles.pulseIcon} />
                     <h3>Extracting Real Data Rows...</h3>
-                    <p>Parsing across all sub-sheets to calculate Deep Performance Metrics.</p>
+                    <p>Fuzzy-scanning thousands of cells to calculate True Metrics.</p>
                 </div>
             )}
 
             {analysis && (
                 <div className="animate-fade-in">
-                    <section className={styles.summaryGrid}>
+                    <section className={`${styles.summaryGrid} ${styles.hideOnPrint}`}>
                         <div className={`glass-panel ${styles.summaryCard}`}>
                             <DollarSign size={20} color="var(--accent-primary)" />
                             <span className={styles.sumLabel}>Total Spend ({analysis.summary.sheetsParsed} Sheets Parsed)</span>
@@ -419,7 +374,7 @@ export default function AdsOptimizer() {
                         </div>
                     </section>
 
-                    <div className={styles.deepMetricsGrid}>
+                    <div className={`${styles.deepMetricsGrid} ${styles.hideOnPrint}`}>
                         <div className={`glass-panel ${styles.breakdownPanel}`}>
                             <div className={styles.panelHeader}>
                                 <h3><PieChart size={18} /> Parsed Match Type Topology</h3>
@@ -444,30 +399,40 @@ export default function AdsOptimizer() {
                         </div>
                     </div>
 
-                    <div className={`glass-panel ${styles.suggestionsPanel}`}>
-                        <div className={styles.suggHeader}>
-                            <Lightbulb size={24} className="gradient-text" />
-                            <div>
-                                <h3>Context-Aware Growth Strategies</h3>
-                                <span className={styles.accuracyTag}>Generated dynamically from: {analysis.summary.sourceFiles.join(" + ")}</span>
+                    {/* NEW: Agency Client Report Output */}
+                    <div className={styles.agencyReportPanel}>
+                        <div className={styles.reportHeader}>
+                            <h3><Lightbulb size={24} className="gradient-text" /> Professional Agency Strategy Report</h3>
+                            <button className={styles.printBtn} onClick={() => window.print()}>
+                                <Printer size={16} /> Export to PDF
+                            </button>
+                        </div>
+                        
+                        <div className={styles.reportGrid}>
+                            <div className={styles.reportCol}>
+                                <h4><FileSearch size={18} /> Current Client Setup</h4>
+                                <ul>
+                                    {analysis.agencyReport.currentStructure.map((item, i) => (
+                                        <li key={i}>{item}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className={styles.reportCol}>
+                                <h4><Wrench size={18} /> Proposed Campaign Architecture</h4>
+                                <ul>
+                                    {analysis.agencyReport.proposedStructure.map((item, i) => (
+                                        <li key={i}>{item}</li>
+                                    ))}
+                                </ul>
                             </div>
                         </div>
-                        <div className={styles.suggGrid}>
-                            {analysis.suggestions.map((sugg, i) => (
-                                <div key={i} className={styles.suggCard}>
-                                    <div className={styles.suggTop}>
-                                        <span className={`${styles.impactBadge} ${styles[sugg.impact.toLowerCase()]}`}>{sugg.impact} Impact</span>
-                                        <span className={styles.confBadge}>{sugg.confidence}% Confidence</span>
-                                    </div>
-                                    <h4>{sugg.title}</h4>
-                                    <p>{sugg.description}</p>
-                                    <div className={styles.dataPointBadge}>{sugg.dataPoint}</div>
-                                </div>
-                            ))}
+                        <div className={styles.pitchSummary}>
+                            <h4>⚡ Strategic Pitch Summary for Client</h4>
+                            <p>{analysis.agencyReport.pitchSummary}</p>
                         </div>
                     </div>
                     
-                    <button className={styles.resetBtn} onClick={() => setAnalysis(null)}>
+                    <button className={`${styles.resetBtn} ${styles.hideOnPrint}`} onClick={() => setAnalysis(null)} style={{marginTop: '32px'}}>
                         Upload New Files
                     </button>
                 </div>
