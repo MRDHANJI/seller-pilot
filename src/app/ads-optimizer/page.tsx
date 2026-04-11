@@ -118,35 +118,50 @@ export default function AdsOptimizer() {
 
                     workbook.SheetNames.forEach(sheetName => {
                         const worksheet = workbook.Sheets[sheetName];
-                        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" }) as Array<Record<string, string | number | boolean | undefined>>;
+                        // Pull as 2D array matrix to completely ignore XLSX header assumptions
+                        const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" }) as unknown[][];
                         
-                        if (rows.length > 0) {
+                        if (matrix.length < 2) return; // Skip empty sheets
+
+                        // Scan first 15 rows to find the actual Header Row
+                        let headerIdx = -1;
+                        for (let i = 0; i < Math.min(15, matrix.length); i++) {
+                            const rowString = matrix[i].join(" ").toLowerCase();
+                            // If the row contains at least 'spend' or 'campaign' or 'sales', it's the header
+                            if (rowString.includes("spend") || rowString.includes("cost") || rowString.includes("campaign") || rowString.includes("sales")) {
+                                headerIdx = i;
+                                break;
+                            }
+                        }
+
+                        if (headerIdx !== -1) {
                             sheetsParsedCount++;
-                            
-                            rows.forEach(rawRow => {
-                                const row: Record<string, string | number | boolean | undefined> = {};
-                                Object.keys(rawRow).forEach(k => {
-                                    if (k) row[k.trim().toLowerCase()] = rawRow[k];
-                                });
+                            const headers = matrix[headerIdx].map((h: unknown) => String(h || "").toLowerCase().trim());
 
-                                // Extremely Aggressive Fuzzy Column Matching
-                                const scanKey = (keyword: string) => {
-                                    const match = Object.keys(row).find(k => k.includes(keyword));
-                                    return match ? String(row[match]) : "";
-                                };
+                            // Map exact indices dynamically
+                            const spendIdx = headers.findIndex(h => h.includes('spend') || h.includes('cost'));
+                            const salesIdx = headers.findIndex(h => h.includes('sale'));
+                            const clicksIdx = headers.findIndex(h => h.includes('click'));
+                            const matchIdx = headers.findIndex(h => h.includes('match') || h.includes('type') && !h.includes('target'));
+                            const targetIdx = headers.findIndex(h => h.includes('target') || h.includes('keyword'));
 
-                                const spendStr = scanKey('spend').replace(/[^0-9.-]+/g,"");
-                                const salesStr = scanKey('sale').replace(/[^0-9.-]+/g,"");
-                                const clicksStr = scanKey('click').replace(/[^0-9.-]+/g,"");
+                            // Iterate all data rows below header
+                            for (let i = headerIdx + 1; i < matrix.length; i++) {
+                                const rowData = matrix[i];
+                                if (!rowData || rowData.length === 0) continue;
+
+                                const getVal = (idx: number) => idx !== -1 ? String(rowData[idx] || "") : "";
+
+                                const spendStr = getVal(spendIdx).replace(/[^0-9.-]+/g,"");
+                                const salesStr = getVal(salesIdx).replace(/[^0-9.-]+/g,"");
+                                const clicksStr = getVal(clicksIdx).replace(/[^0-9.-]+/g,"");
 
                                 const spend = Number(spendStr) || 0;
                                 const sales = Number(salesStr) || 0;
                                 const clicks = Number(clicksStr) || 0;
 
-                                const matchType = scanKey('match').toLowerCase();
-                                const targetingExp1 = scanKey('target').toLowerCase();
-                                const targetingExp2 = scanKey('keyword').toLowerCase();
-                                const targetingExp = targetingExp1 || targetingExp2;
+                                const matchType = getVal(matchIdx).toLowerCase();
+                                const targetingExp = getVal(targetIdx).toLowerCase();
 
                                 totalSpend += spend;
                                 totalSales += sales;
@@ -179,7 +194,7 @@ export default function AdsOptimizer() {
                                     targeting.keyword.sales += sales;
                                     targeting.keyword.clicks += clicks;
                                 }
-                            });
+                            }
                         }
                     });
 
