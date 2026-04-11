@@ -138,18 +138,23 @@ export default function AdsOptimizer() {
                         if (rows.length > 0) {
                             sheetsParsedCount++;
                             
-                            rows.forEach(row => {
+                            rows.forEach(rawRow => {
+                                const row: Record<string, string | number | undefined> = {};
+                                Object.keys(rawRow).forEach(k => {
+                                    if (k) row[k.trim().toLowerCase()] = rawRow[k];
+                                });
+
                                 // Dynamically map common Amazon headers across all ad formats
-                                const spendStr = String(row['Spend'] || row['Spend(INR)'] || row['spend'] || row['Spend (INR)'] || 0).replace(/[^0-9.-]+/g,"");
-                                const salesStr = String(row['Sales'] || row['14 Day Total Sales'] || row['7 Day Total Sales'] || row['Sales(INR)'] || row['Sales (INR)'] || 0).replace(/[^0-9.-]+/g,"");
-                                const clicksStr = String(row['Clicks'] || row['clicks'] || 0).replace(/[^0-9.-]+/g,"");
+                                const spendStr = String(row['spend'] || row['spend(inr)'] || row['spend (inr)'] || 0).replace(/[^0-9.-]+/g,"");
+                                const salesStr = String(row['sales'] || row['14 day total sales'] || row['7 day total sales'] || row['sales(inr)'] || row['sales (inr)'] || row['total sales'] || 0).replace(/[^0-9.-]+/g,"");
+                                const clicksStr = String(row['clicks'] || 0).replace(/[^0-9.-]+/g,"");
 
                                 const spend = Number(spendStr) || 0;
                                 const sales = Number(salesStr) || 0;
                                 const clicks = Number(clicksStr) || 0;
 
-                                const matchType = (row['Match Type'] || row['match Type'] || row['Match type'] || "").toString().toLowerCase();
-                                const targetingExp = (row['Targeting Expression'] || row['Keyword Text'] || row['Keyword'] || row['Targeting'] || "").toString().toLowerCase();
+                                const matchType = String(row['match type'] || row['match_type'] || "").toLowerCase();
+                                const targetingExp = String(row['targeting expression'] || row['keyword text'] || row['keyword'] || row['targeting'] || row['target'] || "").toLowerCase();
 
                                 totalSpend += spend;
                                 totalSales += sales;
