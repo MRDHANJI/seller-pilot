@@ -213,7 +213,7 @@ export async function findAsinRank(asin: string, keyword: string, domain: string
                 throw new Error("Blocked by Amazon CAPTCHA");
             }
 
-            const hasNext = $('.s-pagination-next').length > 0 && !$('.s-pagination-disabled, .s-pagination-next.a-disabled').length;
+            const hasNext = $('.s-pagination-next').length > 0 && !$('.s-pagination-next.s-pagination-disabled, .s-pagination-next.a-disabled').length;
             if (!hasNext) break;
 
             await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
