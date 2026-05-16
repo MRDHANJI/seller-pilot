@@ -86,184 +86,185 @@ export default function AdsOptimizer() {
 
         const primaryFile = targetFile || structureFile || bulkFile;
 
-        const sources: string[] = [];
-        if (bulkFile) sources.push('Bulk Operations');
-        if (structureFile) sources.push('Ad Structure');
-        if (targetFile) sources.push('Targeting Data');
+            // ... context logic
+            const sources: string[] = [];
+            if (bulkFile) sources.push('Bulk Operations');
+            if (structureFile) sources.push('Ad Structure');
+            if (targetFile) sources.push('Targeting Data');
 
-        if (primaryFile) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const dataBuffer = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const workbook = XLSX.read(dataBuffer, { type: "array" });
-                    
-                    let totalSpend = 0;
-                    let totalSales = 0;
-                    let totalClicks = 0;
-                    let sheetsParsedCount = 0;
+            let globalDebugHeaders = "";
 
-                    const matchTypes: MatchTypeData = {
-                        exact: { spend: 0, sales: 0, roas: 0 },
-                        phrase: { spend: 0, sales: 0, roas: 0 },
-                        broad: { spend: 0, sales: 0, roas: 0 },
-                        auto: { spend: 0, sales: 0, roas: 0 }
-                    };
-
-                    const targeting: TargetingData = {
-                        keyword: { spend: 0, sales: 0, cpc: 0, clicks: 0 },
-                        product: { spend: 0, sales: 0, cpc: 0, clicks: 0 },
-                        audience: { spend: 0, sales: 0, cpc: 0, clicks: 0 }
-                    };
-
-                    workbook.SheetNames.forEach(sheetName => {
-                        const worksheet = workbook.Sheets[sheetName];
-                        // Pull as 2D array matrix to completely ignore XLSX header assumptions
-                        const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" }) as unknown[][];
+            if (primaryFile) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const dataBuffer = new Uint8Array(e.target?.result as ArrayBuffer);
+                        const workbook = XLSX.read(dataBuffer, { type: "array" });
                         
-                        if (matrix.length < 2) return; // Skip empty sheets
+                        let totalSpend = 0;
+                        let totalSales = 0;
+                        let totalClicks = 0;
+                        let sheetsParsedCount = 0;
 
-                        // Scan first 15 rows to find the actual Header Row
-                        let headerIdx = -1;
-                        for (let i = 0; i < Math.min(15, matrix.length); i++) {
-                            const rowString = matrix[i].join(" ").toLowerCase();
-                            // If the row contains at least 'spend' or 'campaign' or 'sales', it's the header
-                            if (rowString.includes("spend") || rowString.includes("cost") || rowString.includes("campaign") || rowString.includes("sales")) {
-                                headerIdx = i;
-                                break;
-                            }
-                        }
+                        const matchTypes: MatchTypeData = {
+                            exact: { spend: 0, sales: 0, roas: 0 },
+                            phrase: { spend: 0, sales: 0, roas: 0 },
+                            broad: { spend: 0, sales: 0, roas: 0 },
+                            auto: { spend: 0, sales: 0, roas: 0 }
+                        };
 
-                        if (headerIdx !== -1) {
-                            sheetsParsedCount++;
-                            const headers = matrix[headerIdx].map((h: unknown) => String(h || "").toLowerCase().trim());
+                        const targeting: TargetingData = {
+                            keyword: { spend: 0, sales: 0, cpc: 0, clicks: 0 },
+                            product: { spend: 0, sales: 0, cpc: 0, clicks: 0 },
+                            audience: { spend: 0, sales: 0, cpc: 0, clicks: 0 }
+                        };
 
-                            // Map exact indices dynamically
-                            const spendIdx = headers.findIndex(h => h.includes('spend') || h.includes('cost'));
-                            const salesIdx = headers.findIndex(h => h.includes('sale'));
-                            const clicksIdx = headers.findIndex(h => h.includes('click'));
-                            const matchIdx = headers.findIndex(h => h.includes('match') || h.includes('type') && !h.includes('target'));
-                            const targetIdx = headers.findIndex(h => h.includes('target') || h.includes('keyword'));
+                        workbook.SheetNames.forEach(sheetName => {
+                            const worksheet = workbook.Sheets[sheetName];
+                            const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" }) as unknown[][];
+                            
+                            if (matrix.length < 2) return; 
 
-                            // Iterate all data rows below header
-                            for (let i = headerIdx + 1; i < matrix.length; i++) {
-                                const rowData = matrix[i];
-                                if (!rowData || rowData.length === 0) continue;
-
-                                const getVal = (idx: number) => idx !== -1 ? String(rowData[idx] || "") : "";
-
-                                const spendStr = getVal(spendIdx).replace(/[^0-9.-]+/g,"");
-                                const salesStr = getVal(salesIdx).replace(/[^0-9.-]+/g,"");
-                                const clicksStr = getVal(clicksIdx).replace(/[^0-9.-]+/g,"");
-
-                                const spend = Number(spendStr) || 0;
-                                const sales = Number(salesStr) || 0;
-                                const clicks = Number(clicksStr) || 0;
-
-                                const matchType = getVal(matchIdx).toLowerCase();
-                                const targetingExp = getVal(targetIdx).toLowerCase();
-
-                                totalSpend += spend;
-                                totalSales += sales;
-                                totalClicks += clicks;
-
-                                if (matchType.includes('exact')) {
-                                    matchTypes.exact.spend += spend;
-                                    matchTypes.exact.sales += sales;
-                                } else if (matchType.includes('phrase')) {
-                                    matchTypes.phrase.spend += spend;
-                                    matchTypes.phrase.sales += sales;
-                                } else if (matchType.includes('broad')) {
-                                    matchTypes.broad.spend += spend;
-                                    matchTypes.broad.sales += sales;
-                                } else if (matchType.includes('auto') || matchType.includes('-') || (spend > 0 && !matchType)) { 
-                                    matchTypes.auto.spend += spend;
-                                    matchTypes.auto.sales += sales;
-                                }
-
-                                if (targetingExp.includes('asin=') || targetingExp.includes('category=') || targetingExp.includes('product')) {
-                                    targeting.product.spend += spend;
-                                    targeting.product.sales += sales;
-                                    targeting.product.clicks += clicks;
-                                } else if (targetingExp.includes('audience') || targetingExp.includes('view') || targetingExp.includes('purchase')) {
-                                    targeting.audience.spend += spend;
-                                    targeting.audience.sales += sales;
-                                    targeting.audience.clicks += clicks;
-                                } else if (targetingExp) {
-                                    targeting.keyword.spend += spend;
-                                    targeting.keyword.sales += sales;
-                                    targeting.keyword.clicks += clicks;
+                            let headerIdx = -1;
+                            for (let i = 0; i < Math.min(15, matrix.length); i++) {
+                                const rowString = matrix[i].join(" ").toLowerCase();
+                                if (rowString.includes("spend") || rowString.includes("cost") || rowString.includes("spent") || rowString.includes("amount") || rowString.includes("campaign") || rowString.includes("sales")) {
+                                    headerIdx = i;
+                                    break;
                                 }
                             }
+
+                            if (headerIdx !== -1) {
+                                sheetsParsedCount++;
+                                const headers = matrix[headerIdx].map((h: unknown) => String(h || "").toLowerCase().trim());
+                                globalDebugHeaders += `[${sheetName}: ${headers.join(", ")}] `;
+
+                                const spendIdx = headers.findIndex(h => h.includes('spend') || h.includes('spent') || h.includes('cost') || h.includes('amount'));
+                                const salesIdx = headers.findIndex(h => h.includes('sale') || h.includes('revenue') || h.includes('turnover'));
+                                const clicksIdx = headers.findIndex(h => h.includes('click'));
+                                const matchIdx = headers.findIndex(h => h.includes('match') || h.includes('type') && !h.includes('target'));
+                                const targetIdx = headers.findIndex(h => h.includes('target') || h.includes('keyword'));
+
+                                for (let i = headerIdx + 1; i < matrix.length; i++) {
+                                    const rowData = matrix[i] as any[];
+                                    if (!rowData || rowData.length === 0) continue;
+
+                                    const getVal = (idx: number) => idx !== -1 ? String(rowData[idx] || "") : "";
+
+                                    const spendStr = getVal(spendIdx).replace(/[^0-9.-]+/g,"");
+                                    const salesStr = getVal(salesIdx).replace(/[^0-9.-]+/g,"");
+                                    const clicksStr = getVal(clicksIdx).replace(/[^0-9.-]+/g,"");
+
+                                    const spend = Number(spendStr) || 0;
+                                    const sales = Number(salesStr) || 0;
+                                    const clicks = Number(clicksStr) || 0;
+
+                                    const matchType = getVal(matchIdx).toLowerCase();
+                                    const targetingExp = getVal(targetIdx).toLowerCase();
+
+                                    totalSpend += spend;
+                                    totalSales += sales;
+                                    totalClicks += clicks;
+
+                                    if (matchType.includes('exact')) {
+                                        matchTypes.exact.spend += spend;
+                                        matchTypes.exact.sales += sales;
+                                    } else if (matchType.includes('phrase')) {
+                                        matchTypes.phrase.spend += spend;
+                                        matchTypes.phrase.sales += sales;
+                                    } else if (matchType.includes('broad')) {
+                                        matchTypes.broad.spend += spend;
+                                        matchTypes.broad.sales += sales;
+                                    } else if (matchType.includes('auto') || matchType.includes('-') || (spend > 0 && (!matchType || matchType === "" || matchType === " "))) { 
+                                        matchTypes.auto.spend += spend;
+                                        matchTypes.auto.sales += sales;
+                                    }
+
+                                    if (targetingExp.includes('asin=') || targetingExp.includes('category=') || targetingExp.includes('product')) {
+                                        targeting.product.spend += spend;
+                                        targeting.product.sales += sales;
+                                        targeting.product.clicks += clicks;
+                                    } else if (targetingExp.includes('audience') || targetingExp.includes('view') || targetingExp.includes('purchase')) {
+                                        targeting.audience.spend += spend;
+                                        targeting.audience.sales += sales;
+                                        targeting.audience.clicks += clicks;
+                                    } else if (targetingExp && targetingExp !== "") {
+                                        targeting.keyword.spend += spend;
+                                        targeting.keyword.sales += sales;
+                                        targeting.keyword.clicks += clicks;
+                                    }
+                                }
+                            }
+                        });
+
+                        const calcRoas = (sales: number, spend: number) => spend > 0 ? parseFloat((sales / spend).toFixed(2)) : 0;
+                        const calcCpc = (spend: number, clicks: number) => clicks > 0 ? parseFloat((spend / clicks).toFixed(2)) : 0;
+
+                        const globalRoas = calcRoas(totalSales, totalSpend);
+                        const globalCpc = calcCpc(totalSpend, totalClicks);
+                        const globalAcos = totalSales > 0 ? Math.round((totalSpend / totalSales) * 100) : 0;
+
+                        matchTypes.exact.roas = calcRoas(matchTypes.exact.sales, matchTypes.exact.spend);
+                        matchTypes.phrase.roas = calcRoas(matchTypes.phrase.sales, matchTypes.phrase.spend);
+                        matchTypes.broad.roas = calcRoas(matchTypes.broad.sales, matchTypes.broad.spend);
+                        matchTypes.auto.roas = calcRoas(matchTypes.auto.sales, matchTypes.auto.spend);
+
+                        targeting.keyword.cpc = calcCpc(targeting.keyword.spend, targeting.keyword.clicks);
+                        targeting.product.cpc = calcCpc(targeting.product.spend, targeting.product.clicks);
+                        targeting.audience.cpc = calcCpc(targeting.audience.spend, targeting.audience.clicks);
+
+                        const exactRatio = totalSpend > 0 ? Math.round((matchTypes.exact.spend / totalSpend) * 100) : 0;
+                        const broadRatio = totalSpend > 0 ? Math.round((matchTypes.broad.spend / totalSpend) * 100) : 0;
+
+                        const report: AgencyReport = {
+                            currentStructure: [
+                                `Account is tracking ₹${totalSpend.toLocaleString()} in ad spend driving a global ACOS of ${globalAcos}%.`,
+                                `Keyword topology shows ${exactRatio}% locked in Exact Match vs ${broadRatio}% in Broad Match discovery.`,
+                                `Actual Exact Match ROAS is sitting at ${matchTypes.exact.roas}x, compared to Broad Match at ${matchTypes.broad.roas}x.`,
+                                `Product (ASIN) Targeting CPC averages ₹${targeting.product.cpc} vs Keyword CPC at ₹${targeting.keyword.cpc}.`
+                            ],
+                            proposedStructure: [],
+                            pitchSummary: ''
+                        };
+
+                        if (sources.includes('Ad Structure')) {
+                            report.proposedStructure = [
+                                `Restructure instantly: Extract the top performing search terms and migrate into isolated Single Keyword Ad Groups (SKAGs).`,
+                                `Pause all Broad campaigns currently exceeding ${globalAcos + 5}% ACOS to instantly trap bleeding margins.`,
+                                `Apply a 20% 'Top of Search' placement modifier uniquely to your Exact match campaigns to block competitors capturing highest intent clicks.`
+                            ];
+                            report.pitchSummary = `The current ad architecture has significant structural bleed. By migrating to a heavily controlled SKAG setup and choking the Broad-match budget drain, we can re-route those exact funds into your high-ROAS (${matchTypes.exact.roas}x) Exact tiers. This structurally guarantees an immediate lift in global profitability.`;
+                        } else if (sources.includes('Bulk Operations')) {
+                             report.proposedStructure = [
+                                `Halt under-performing portfolio bleed: Run a Pivot block across Sponsored Products vs Sponsored Brands.`,
+                                `Implement an aggressive 15% downward bid automation on the worst-performing ad format.`,
+                                `Launch Defense nodes: Bid strictly on your own top 3 ASINs to prevent the ${globalAcos}% ACOS from leaking to cheaper competitor substitutions.`
+                            ];
+                            report.pitchSummary = `Multi-format cannibalization is visible across the ${sheetsParsedCount} parsed sub-sheets. Instead of managing individual targets, the macro-strategy requires shifting total budget caps between Sponsored Products and Sponsored Brands to favor whichever format possesses cheaper acquisition costs presently.`;
+                        } else {
+                             report.proposedStructure = [
+                                `Exploit Targeting Arbitrage: Your Product Targeting (PT) is running at ₹${targeting.product.cpc} CPC. Expand ASIN conquesting immediately on competitors priced 5%+ higher.`,
+                                `Extract Exact Match dominance: Pull raw Search Term reports and filter exclusively for 3-word long-tail queries.`,
+                                `Establish Audience Defense: Allocate 10% budget entirely to remarketing views to guarantee conversions on the 2nd touchpoint.`
+                            ];
+                            report.pitchSummary = `Your placement density displays actionable arbitrage. We must isolate those highly efficient Product Targets and rapidly expand ASIN-conquesting logic before competitors bid up the defensive real estate.`;
                         }
-                    });
 
-                    // Avoid UI Infinity or NaN
-                    const calcRoas = (sales: number, spend: number) => spend > 0 ? parseFloat((sales / spend).toFixed(2)) : 0;
-                    const calcCpc = (spend: number, clicks: number) => clicks > 0 ? parseFloat((spend / clicks).toFixed(2)) : 0;
-
-                    const globalRoas = calcRoas(totalSales, totalSpend);
-                    const globalCpc = calcCpc(totalSpend, totalClicks);
-                    const globalAcos = totalSales > 0 ? Math.round((totalSpend / totalSales) * 100) : 0;
-
-                    matchTypes.exact.roas = calcRoas(matchTypes.exact.sales, matchTypes.exact.spend);
-                    matchTypes.phrase.roas = calcRoas(matchTypes.phrase.sales, matchTypes.phrase.spend);
-                    matchTypes.broad.roas = calcRoas(matchTypes.broad.sales, matchTypes.broad.spend);
-                    matchTypes.auto.roas = calcRoas(matchTypes.auto.sales, matchTypes.auto.spend);
-
-                    targeting.keyword.cpc = calcCpc(targeting.keyword.spend, targeting.keyword.clicks);
-                    targeting.product.cpc = calcCpc(targeting.product.spend, targeting.product.clicks);
-                    targeting.audience.cpc = calcCpc(targeting.audience.spend, targeting.audience.clicks);
-
-                    // Context-Aware Agency Generator Logic
-                    const exactRatio = totalSpend > 0 ? Math.round((matchTypes.exact.spend / totalSpend) * 100) : 0;
-                    const broadRatio = totalSpend > 0 ? Math.round((matchTypes.broad.spend / totalSpend) * 100) : 0;
-
-                    const report: AgencyReport = {
-                        currentStructure: [
-                            `Account is tracking ₹${totalSpend.toLocaleString()} in ad spend driving a global ACOS of ${globalAcos}%.`,
-                            `Keyword topology shows ${exactRatio}% locked in Exact Match vs ${broadRatio}% in Broad Match discovery.`,
-                            `Actual Exact Match ROAS is sitting at ${matchTypes.exact.roas}x, compared to Broad Match at ${matchTypes.broad.roas}x.`,
-                            `Product (ASIN) Targeting CPC averages ₹${targeting.product.cpc} vs Keyword CPC at ₹${targeting.keyword.cpc}.`
-                        ],
-                        proposedStructure: [],
-                        pitchSummary: ''
-                    };
-
-                    if (sources.includes('Ad Structure')) {
-                        report.proposedStructure = [
-                            `Restructure instantly: Extract the top performing search terms and migrate into isolated Single Keyword Ad Groups (SKAGs).`,
-                            `Pause all Broad campaigns currently exceeding ${globalAcos + 5}% ACOS to instantly trap bleeding margins.`,
-                            `Apply a 20% 'Top of Search' placement modifier uniquely to your Exact match campaigns to block competitors capturing highest intent clicks.`
-                        ];
-                        report.pitchSummary = `The current ad architecture has significant structural bleed. By migrating to a heavily controlled SKAG setup and choking the Broad-match budget drain, we can re-route those exact funds into your high-ROAS (${matchTypes.exact.roas}x) Exact tiers. This structurally guarantees an immediate lift in global profitability.`;
-                    } else if (sources.includes('Bulk Operations')) {
-                         report.proposedStructure = [
-                            `Halt under-performing portfolio bleed: Run a Pivot block across Sponsored Products vs Sponsored Brands.`,
-                            `Implement an aggressive 15% downward bid automation on the worst-performing ad format.`,
-                            `Launch Defense nodes: Bid strictly on your own top 3 ASINs to prevent the ${globalAcos}% ACOS from leaking to cheaper competitor substitutions.`
-                        ];
-                        report.pitchSummary = `Multi-format cannibalization is visible across the ${sheetsParsedCount} parsed sub-sheets. Instead of managing individual targets, the macro-strategy requires shifting total budget caps between Sponsored Products and Sponsored Brands to favor whichever format possesses cheaper acquisition costs presently.`;
-                    } else {
-                        // Targeting Logic
-                         report.proposedStructure = [
-                            `Exploit Targeting Arbitrage: Your Product Targeting (PT) is running at ₹${targeting.product.cpc} CPC. Expand ASIN conquesting immediately on competitors priced 5%+ higher.`,
-                            `Extract Exact Match dominance: Pull raw Search Term reports and filter exclusively for 3-word long-tail queries.`,
-                            `Establish Audience Defense: Allocate 10% budget entirely to remarketing views to guarantee conversions on the 2nd touchpoint.`
-                        ];
-                        report.pitchSummary = `Your placement density displays actionable arbitrage. We must isolate those highly efficient Product Targets and rapidly expand ASIN-conquesting logic before competitors bid up the defensive real estate.`;
-                    }
-
-                    setAnalysis({
-                        summary: {
-                            totalSpend,
-                            sales: totalSales,
-                            acos: globalAcos,
-                            roas: globalRoas,
-                            avgCpc: globalCpc,
-                            sourceFiles: sources,
-                            sheetsParsed: sheetsParsedCount
-                        },
+                        setAnalysis({
+                            summary: {
+                                totalSpend,
+                                sales: totalSales,
+                                acos: globalAcos,
+                                roas: globalRoas,
+                                avgCpc: globalCpc,
+                                sourceFiles: sources,
+                                sheetsParsed: sheetsParsedCount,
+                                debugHeaders: globalDebugHeaders || "No headers found."
+                            },
+                            matchTypes: matchTypes,
+                            targeting: targeting,
+                            agencyReport: report
+                        });
                         matchTypes: matchTypes,
                         targeting: targeting,
                         agencyReport: report

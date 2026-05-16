@@ -180,7 +180,10 @@ export async function findAsinRank(asin: string, keyword: string, domain: string
                 const currentAsin = $(el).attr('data-asin');
                 if (!currentAsin || currentAsin === '') return;
 
-                const isSponsored = $(el).find('.s-sponsored-label, .puis-sponsored-label-text').length > 0;
+                // Robust Sponsored Detection
+                const isSponsored = $(el).find('.s-sponsored-label-info-icon, .puis-sponsored-label-text, .puis-sponsored-label-info-icon').length > 0 ||
+                    $(el).find('a[aria-label*="Sponsored"]').length > 0 ||
+                    $(el).find('span').filter((_, elSpan) => $(elSpan).text().trim() === 'Sponsored').length > 0;
 
                 if (!isSponsored) {
                     organicCount++;
@@ -197,7 +200,7 @@ export async function findAsinRank(asin: string, keyword: string, domain: string
                         price: price.replace(/[^\d,.]/g, ''),
                         status: isSponsored ? 'Sponsored' : 'Organic'
                     };
-                    return false;
+                    return false; // Break the cheerio loop
                 }
             });
 
@@ -205,7 +208,12 @@ export async function findAsinRank(asin: string, keyword: string, domain: string
                 return result;
             }
 
-            const hasNext = $('.s-pagination-next').length > 0 && !$('.s-pagination-disabled').length;
+            // Check if pagination exists or we hit a CAPTCHA
+            if (html.includes('api/services/support/feedback') || html.includes('captcha')) {
+                throw new Error("Blocked by Amazon CAPTCHA");
+            }
+
+            const hasNext = $('.s-pagination-next').length > 0 && !$('.s-pagination-disabled, .s-pagination-next.a-disabled').length;
             if (!hasNext) break;
 
             await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));

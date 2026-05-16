@@ -9,10 +9,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "ASIN and Keyword are required" }, { status: 400 });
         }
 
+        // Call the internal Next.js/cheerio scraper directly
         const result = await findAsinRank(asin, keyword);
 
         if (result.error) {
-            return NextResponse.json({ error: result.error }, { status: 500 });
+            throw new Error(result.error);
         }
 
         return NextResponse.json({
@@ -25,7 +26,8 @@ export async function POST(req: Request) {
             status: result.status,
             success: true
         });
-    } catch {
-        return NextResponse.json({ error: "Failed to track keyword" }, { status: 500 });
+    } catch (error: any) {
+        console.error("API Route Error:", error);
+        return NextResponse.json({ error: error.message || "Failed to track keyword. Amazon might have blocked the request." }, { status: 500 });
     }
 }
