@@ -188,7 +188,7 @@ export default function KeywordTracker() {
                     <div className={`glass-panel ${styles.emptyState}`}>
                         <RefreshCw size={48} className={styles.emptyIcon} />
                         <h3>Analyze your position</h3>
-                        <p>We&apos;ll scan up to 10 pages on Amazon.in search results to find exactly where your product appears.</p>
+                        <p>We&apos;ll scan up to 3 pages on Amazon.in search results to find exactly where your product appears.</p>
                     </div>
                 )
             )}

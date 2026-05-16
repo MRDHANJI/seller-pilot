@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { findAsinRank } from "@/lib/amazon-scraper";
 
-export const maxDuration = 60; // Allow Vercel to run up to 60 seconds for scraping
-
 export async function POST(req: Request) {
     try {
         const { asin, keyword } = await req.json();

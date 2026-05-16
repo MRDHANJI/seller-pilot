@@ -157,7 +157,7 @@ export interface RankResult {
 export async function findAsinRank(asin: string, keyword: string, domain: string = 'amazon.in'): Promise<RankResult> {
     const headers = getHeaders();
     let organicCount = 0;
-    const maxPages = 10;
+    const maxPages = 3; // Reduced from 10 to 3 to avoid Vercel Hobby 10s timeout
 
     for (let page = 1; page <= maxPages; page++) {
         const url = `https://www.${domain}/s?k=${encodeURIComponent(keyword)}&page=${page}`;
