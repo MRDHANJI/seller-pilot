@@ -173,6 +173,12 @@ export async function findAsinRank(asin: string, keyword: string, domain: string
             const html = await response.text();
             const $ = cheerio.load(html);
 
+            // Strict Bot Check: Amazon returned a 200 OK but the page has no products
+            if (page === 1 && $('[data-asin]').length === 0) {
+                const title = $('title').text();
+                throw new Error(`Blocked by Amazon Bot Protection (Vercel IP). Title: "${title}". Please run the app locally.`);
+            }
+
             let foundOnThisPage = false;
             let result: RankResult | null = null;
 
