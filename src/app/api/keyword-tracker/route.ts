@@ -9,12 +9,26 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "ASIN and Keyword are required" }, { status: 400 });
         }
 
-        // Call the internal Next.js/cheerio scraper directly
-        const result = await findAsinRank(asin, keyword);
-
-        if (result.error) {
-            throw new Error(result.error);
+        // Call the local Python Selenium API (runs on port 8000)
+        const pythonApiUrl = process.env.PYTHON_SCRAPER_API_URL || 'http://localhost:8000/api/track-keyword';
+        
+        const response = await fetch(pythonApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ asin, keyword })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Python API returned Status: ${response.status}. Make sure you ran start-python-backend.bat!`);
         }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.detail || "Error from Python Selenium scraper");
+        }
+
+        const result = data.data;
 
         return NextResponse.json({
             asin,
