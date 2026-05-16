@@ -38,7 +38,7 @@ def track_keyword(req: TrackRequest):
     try:
         service = Service(gecko_driver_path)
         options = webdriver.FirefoxOptions()
-        options.add_argument('--headless') # Run in headless mode so it doesn't pop up a window every time
+        # Removed headless mode so user can see what's happening and solve captchas if needed
         driver = webdriver.Firefox(service=service, options=options)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to start Firefox WebDriver. Ensure geckodriver is at {gecko_driver_path}. Error: {str(e)}")
@@ -48,13 +48,14 @@ def track_keyword(req: TrackRequest):
         driver.get(search_url)
         time.sleep(random.uniform(2, 4))
 
-        for page in range(1, 4):
+        for page in range(1, 11):
             print(f"Checking page {page} for ASIN {asin}")
             try:
-                WebDriverWait(driver, 10).until(
+                WebDriverWait(driver, 15).until(
                     EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 's-main-slot')]"))
                 )
             except TimeoutException:
+                print(f"ERROR: Timed out waiting for Amazon search results on page {page}. Did Amazon show a CAPTCHA?")
                 break
 
             asin_elements = driver.find_elements(By.XPATH, f"//*[contains(@data-asin, '{asin}')]")
